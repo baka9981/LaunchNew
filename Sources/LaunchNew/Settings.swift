@@ -120,6 +120,8 @@ final class Settings {
     var hotKey: HotKeySpec { didSet { saveCodable(hotKey, "hotKey") } }
     var f4Key: Bool { didSet { save(f4Key, "f4Key") } }
     var trackpadPinch: Bool { didSet { save(trackpadPinch, "trackpadPinch") } }
+    /// Fingers in the pinch, thumb included: 3, 4 or 5.
+    var pinchFingers: Int { didSet { save(pinchFingers, "pinchFingers") } }
     var hotCorner: HotCorner { didSet { save(hotCorner.rawValue, "hotCorner") } }
     var showMenuBarIcon: Bool { didSet { save(showMenuBarIcon, "showMenuBarIcon") } }
     var menuBarIcon: MenuBarIconStyle { didSet { save(menuBarIcon.rawValue, "menuBarIcon") } }
@@ -189,6 +191,7 @@ final class Settings {
         hotKey = (d.data(forKey: "hotKey")).flatMap { try? JSONDecoder().decode(HotKeySpec.self, from: $0) } ?? .default
         f4Key = value("f4Key", false)
         trackpadPinch = value("trackpadPinch", false)
+        pinchFingers = min(5, max(3, value("pinchFingers", 4)))
         hotCorner = HotCorner(rawValue: value("hotCorner", "")) ?? .off
         showMenuBarIcon = value("showMenuBarIcon", true)
         menuBarIcon = MenuBarIconStyle(rawValue: value("menuBarIcon", "")) ?? .grid

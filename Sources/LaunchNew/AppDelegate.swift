@@ -78,11 +78,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             updateStatusTooltip()
         case "f4Key":
             keyTap = settings.f4Key ? LaunchpadKeyTap { [weak self] in self?.launcher.toggle() } : nil
-        case "trackpadPinch":
+        case "trackpadPinch", "pinchFingers":
             pinch?.invalidate()
             pinch = settings.trackpadPinch ? TrackpadPinch(
-                pinchIn: { [weak self] in if self?.launcher.isVisible == false { self?.launcher.show() } },
-                pinchOut: { [weak self] in if self?.launcher.isVisible == true { self?.launcher.hide(restoreFocus: true) } }
+                fingers: settings.pinchFingers,
+                changed: { [weak self] direction, progress in
+                    self?.launcher.pinchChanged(opening: direction == .pinchIn, progress: progress)
+                },
+                ended: { [weak self] direction, commit in
+                    self?.launcher.pinchEnded(opening: direction == .pinchIn, commit: commit)
+                }
             ) : nil
         case "hotCorner":
             hotCorner.corner = settings.hotCorner

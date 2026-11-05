@@ -117,6 +117,10 @@ final class LauncherModel {
     /// Live horizontal offset while a swipe or mouse drag is in progress.
     var dragOffset: CGFloat = 0
     var isPresented = false
+    /// Set while a trackpad pinch is opening or closing the launcher: how shown it is, 0…1.
+    var gestureProgress: Double?
+    /// How shown the launcher is, following a pinch in progress.
+    var shownAmount: Double { gestureProgress ?? (isPresented ? 1 : 0) }
     /// Bumped each time the search field should take focus.
     var focusRequest = 0
     /// Jiggle mode: entered by long press or by holding ⌥.

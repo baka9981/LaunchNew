@@ -154,6 +154,11 @@ final class LauncherController {
     }
 
     func show() {
+        show(interactive: false)
+    }
+
+    /// `interactive`: a pinch is under way and drives how shown the launcher is until it ends.
+    private func show(interactive: Bool) {
         hideToken += 1
         isHiding = false
         let screen = targetScreen()
@@ -175,17 +180,66 @@ final class LauncherController {
             }
         }
 
+        if settings.showBadges { dockBadges.start() }
+        if interactive {
+            model.gestureProgress = 0
+            model.focusRequest += 1
+            return
+        }
+        DispatchQueue.main.async { self.model.focusRequest += 1 }
+        finishShowing(animation: .easeOut(duration: 0.22))
+        writeDebugSnapshotIfRequested()
+    }
+
+    private func finishShowing(animation: Animation) {
         DispatchQueue.main.async {
-            self.model.focusRequest += 1
-            withAnimation(.easeOut(duration: 0.22)) { self.model.isPresented = true }
+            withAnimation(animation) {
+                self.model.isPresented = true
+                self.model.gestureProgress = nil
+            }
         }
         // After the open animation, so the card doesn't pop in over a half-drawn grid.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
             guard let self, self.isVisible else { return }
             self.model.presentPendingIntro()
         }
-        if settings.showBadges { dockBadges.start() }
-        writeDebugSnapshotIfRequested()
+    }
+
+    // MARK: - Trackpad pinch
+
+    /// A pinch opening the launcher is under way.
+    private var pinchOpening = false
+
+    /// Follows a pinch as the fingers move: closing them opens the launcher, spreading closes it.
+    func pinchChanged(opening: Bool, progress: Double) {
+        if opening {
+            if !isVisible {
+                guard !pinchOpening else { return }
+                pinchOpening = true
+                show(interactive: true)
+            }
+            guard pinchOpening else { return }
+            model.gestureProgress = progress
+        } else {
+            guard isVisible, !pinchOpening, model.drag == nil else { return }
+            model.gestureProgress = 1 - progress
+        }
+    }
+
+    /// The fingers lifted (or went all the way): finish the open or close, or spring back.
+    func pinchEnded(opening: Bool, commit: Bool) {
+        if opening {
+            guard pinchOpening else { return }
+            pinchOpening = false
+            if commit { finishShowing(animation: .easeOut(duration: 0.18)) } else { hide(restoreFocus: true) }
+        } else {
+            guard isVisible, model.gestureProgress != nil else { return }
+            if commit {
+                hide(restoreFocus: true)
+            } else {
+                withAnimation(.easeOut(duration: 0.18)) { model.gestureProgress = nil }
+            }
+        }
     }
 
     /// Puts the Dock's badges (by app path) on the matching icons.
@@ -265,7 +319,11 @@ final class LauncherController {
         }
         model.endDrag()
         dockBadges.stop()
-        withAnimation(.easeIn(duration: 0.16)) { model.isPresented = false }
+        pinchOpening = false
+        withAnimation(.easeIn(duration: 0.16)) {
+            model.isPresented = false
+            model.gestureProgress = nil
+        }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.17) {
             guard self.hideToken == token else { return }
             self.panel.orderOut(nil)

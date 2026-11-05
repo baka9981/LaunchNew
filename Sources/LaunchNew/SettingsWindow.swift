@@ -260,8 +260,15 @@ struct GeneralTab: View {
                         Button(String(localized: "授予权限")) { PermissionHelper.shared.request(.accessibility) }
                     }
                 }
-                Row(title: String(localized: "触控板"), subtitle: String(localized: "拇指和三指捏合打开，张开关闭。建议在「系统设置 › 触控板 › 更多手势」里关掉系统自带的同一手势。")) {
+                Row(title: String(localized: "触控板"), subtitle: String(localized: "捏合打开，张开关闭，界面跟随手指；松手时过半就完成，否则退回。建议在「系统设置 › 触控板 › 更多手势」里关掉系统自带的同一手势。")) {
                     Toggle("", isOn: $settings.trackpadPinch).toggleStyle(.switch).labelsHidden()
+                }
+                if settings.trackpadPinch {
+                    Row(title: String(localized: "捏合手指数"), subtitle: String(localized: "包括拇指")) {
+                        MenuPicker(selection: $settings.pinchFingers, options: [3, 4, 5]) {
+                            String(format: String(localized: "%lld 指"), $0)
+                        }
+                    }
                 }
                 Row(title: String(localized: "触发角"), subtitle: String(localized: "把指针推到屏幕角落时打开或关闭")) {
                     MenuPicker(selection: $settings.hotCorner, options: HotCorner.allCases, title: \.title)

@@ -110,8 +110,10 @@ final class LockedCallbackTarget<Target: AnyObject>: @unchecked Sendable {
     }
 }
 
-/// Thumb-and-three-finger pinch on the trackpad, read from the private MultitouchSupport
-/// framework (the public gesture events don't report four-finger pinches to other apps).
+/// Pinch on the trackpad with a chosen number of fingers, read from the private
+/// MultitouchSupport framework (the public gesture events don't report these to other apps).
+/// Reports how far the pinch has got while the fingers move, so the launcher can follow them,
+/// then whether it went far enough when they lift.
 final class TrackpadPinch {
     private typealias Callback = @convention(c) (UnsafeMutableRawPointer?, UnsafeMutableRawPointer?, Int32, Double, Int32) -> Int32
     private typealias CreateList = @convention(c) () -> Unmanaged<CFArray>?
@@ -119,29 +121,42 @@ final class TrackpadPinch {
     private typealias Start = @convention(c) (UnsafeMutableRawPointer, Int32) -> Void
     private typealias Stop = @convention(c) (UnsafeMutableRawPointer) -> Void
 
+    /// Fingers closing together (opens) or spreading apart (closes).
+    enum Direction: Sendable { case pinchIn, spread }
+
     private static let current = LockedCallbackTarget<TrackpadPinch>()
 
-    private let pinchIn: @MainActor @Sendable () -> Void
-    private let pinchOut: @MainActor @Sendable () -> Void
+    private let fingerCount: Int
+    private let changed: @MainActor @Sendable (Direction, Double) -> Void
+    private let ended: @MainActor @Sendable (Direction, Bool) -> Void
     private var devices: [UnsafeMutableRawPointer] = []
     private var stop: Stop?
 
     /// One gesture in progress on one device: where each finger started.
     private struct Gesture {
         var start: [Int32: (Float, Float)] = [:]
-        var fired = false
+        var direction: Direction?
+        var progress = 0.0
+        var done = false
     }
     // Keyed by device, since every trackpad (and Magic Mouse) reports through the same callback.
     private var gestures: [UnsafeMutableRawPointer: Gesture] = [:]
     private let lock = NSLock()
 
-    /// Fraction of the starting spread the fingers must close to (or open past) to count.
+    /// Fraction of the starting spread the fingers must close to (or open past) to complete.
     static let inThreshold: Float = 0.75
     static let outThreshold: Float = 1.33
+    /// Movement below this fraction is ignored, so resting fingers don't start anything.
+    static let deadZone: Float = 0.05
+    /// Lifting the fingers past this much of the way completes the gesture; less cancels it.
+    static let commitProgress = 0.5
 
-    init?(pinchIn: @escaping @MainActor @Sendable () -> Void, pinchOut: @escaping @MainActor @Sendable () -> Void) {
-        self.pinchIn = pinchIn
-        self.pinchOut = pinchOut
+    init?(fingers: Int,
+          changed: @escaping @MainActor @Sendable (Direction, Double) -> Void,
+          ended: @escaping @MainActor @Sendable (Direction, Bool) -> Void) {
+        fingerCount = min(5, max(3, fingers))
+        self.changed = changed
+        self.ended = ended
         guard let handle = dlopen("/System/Library/PrivateFrameworks/MultitouchSupport.framework/MultitouchSupport", RTLD_NOW),
               let createSym = dlsym(handle, "MTDeviceCreateList"),
               let registerSym = dlsym(handle, "MTRegisterContactFrameCallback"),
@@ -190,28 +205,57 @@ final class TrackpadPinch {
         }
         lock.lock()
         defer { lock.unlock() }
-        guard fingers.count >= 2 else { gestures[key] = nil; return }
         var gesture = gestures[key] ?? Gesture()
-        defer { gestures[key] = gesture }
+        defer { gestures[key] = fingers.count >= 2 ? gesture : nil }
+
         // Fingers land one after another: start over each time a new one arrives, so the
-        // starting spread is the whole hand's. Fingers lifting part-way keep the start.
+        // starting spread is the whole hand's.
         if fingers.keys.contains(where: { gesture.start[$0] == nil }) {
-            gesture.start = fingers
+            finish(&gesture)
+            gesture = Gesture(start: fingers)
             return
         }
-        guard !gesture.fired else { return }
-        let ids = fingers.keys.filter { gesture.start[$0] != nil }
-        guard ids.count >= 4 else { return }
-        let before = Self.spread(ids.map { gesture.start[$0]! })
-        let now = Self.spread(ids.map { fingers[$0]! })
-        guard before > 0.02 else { return }
-        if now < before * Self.inThreshold {
-            gesture.fired = true
-            DispatchQueue.main.async { [pinchIn] in pinchIn() }
-        } else if now > before * Self.outThreshold {
-            gesture.fired = true
-            DispatchQueue.main.async { [pinchOut] in pinchOut() }
+        // Lifting fingers ends the gesture: complete it if it got far enough.
+        if fingers.count < fingerCount || fingers.count < 2 {
+            finish(&gesture)
+            return
         }
+        guard !gesture.done, gesture.start.count == fingerCount else { return }
+        let before = Self.spread(gesture.start.values.map { $0 })
+        guard before > 0.02 else { return }
+        let ratio = Self.spread(gesture.start.keys.map { fingers[$0]! }) / before
+
+        if gesture.direction == nil {
+            if ratio < 1 - Self.deadZone { gesture.direction = .pinchIn }
+            else if ratio > 1 + Self.deadZone { gesture.direction = .spread }
+            else { return }
+        }
+        let direction = gesture.direction!
+        let progress = Self.progress(direction, ratio: ratio)
+        if abs(progress - gesture.progress) > 0.01 || progress >= 1 {
+            gesture.progress = progress
+            DispatchQueue.main.async { [changed] in changed(direction, progress) }
+        }
+        if progress >= 1 {
+            gesture.done = true
+            DispatchQueue.main.async { [ended] in ended(direction, true) }
+        }
+    }
+
+    /// How far a pinch has got, 0…1, from the fingers' spread relative to where they started.
+    static func progress(_ direction: Direction, ratio: Float) -> Double {
+        let raw = direction == .pinchIn
+            ? (1 - ratio) / (1 - inThreshold)
+            : (ratio - 1) / (outThreshold - 1)
+        return Double(min(1, max(0, raw)))
+    }
+
+    /// Reports the end of a gesture that was being followed and hasn't completed yet.
+    private func finish(_ gesture: inout Gesture) {
+        guard let direction = gesture.direction, !gesture.done else { return }
+        gesture.done = true
+        let commit = gesture.progress >= Self.commitProgress
+        DispatchQueue.main.async { [ended] in ended(direction, commit) }
     }
 
     /// Mean distance of the points from their centre.

@@ -8,4 +8,13 @@ struct PinchTests {
         let closer = square.map { ($0.0 * 0.5, $0.1 * 0.5) }
         #expect(TrackpadPinch.spread(closer) < TrackpadPinch.spread(square) * TrackpadPinch.inThreshold)
     }
+
+    @Test func progressFollowsTheFingersAndStopsAtTheThreshold() {
+        #expect(TrackpadPinch.progress(.pinchIn, ratio: 1) == 0)
+        #expect(abs(TrackpadPinch.progress(.pinchIn, ratio: 0.875) - 0.5) < 0.001)
+        #expect(TrackpadPinch.progress(.pinchIn, ratio: 0.5) == 1)
+        #expect(TrackpadPinch.progress(.pinchIn, ratio: 1.2) == 0)
+        #expect(TrackpadPinch.progress(.spread, ratio: TrackpadPinch.outThreshold) == 1)
+        #expect(TrackpadPinch.progress(.spread, ratio: 0.9) == 0)
+    }
 }

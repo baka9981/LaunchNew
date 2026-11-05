@@ -126,7 +126,6 @@
 "把指针推到屏幕角落时打开或关闭" = "Open or close when the pointer reaches a screen corner";
 "抖动时显示 ✕" = "Show ✕ while jiggling";
 "抖动模式（长按或按住 ⌥）下，可删除的 App 左上角显示 ✕" = "In jiggle mode (long press or hold ⌥), removable apps show ✕ in the top-left corner";
-"拇指和三指捏合打开，张开关闭。建议在「系统设置 › 触控板 › 更多手势」里关掉系统自带的同一手势。" = "Pinch with your thumb and three fingers to open, spread to close. Consider turning off the same gesture in System Settings › Trackpad › More Gestures.";
 "拖动整理" = "Drag to Organize";
 "拷贝" = "Copy";
 "按 %@ 打开。也可以在设置里打开触控板捏合（拇指和三指）、F4 键或触发角。" = "Press %@ to open. You can also turn on the trackpad pinch (thumb and three fingers), the F4 key or a hot corner in Settings.";
@@ -436,3 +435,7 @@
 "网址、文件或脚本，像 App 一样摆放" = "Websites, files or scripts, arranged like apps";
 "背景图片" = "Background Picture";
 "自定义启动项" = "Custom Items";
+"%lld 指" = "%lld fingers";
+"包括拇指" = "Thumb included";
+"捏合手指数" = "Pinch fingers";
+"捏合打开，张开关闭，界面跟随手指；松手时过半就完成，否则退回。建议在「系统设置 › 触控板 › 更多手势」里关掉系统自带的同一手势。" = "Pinch to open, spread to close; the launcher follows your fingers and finishes if you let go past halfway. Consider turning off the same system gesture in System Settings › Trackpad › More Gestures.";

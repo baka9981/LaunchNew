@@ -116,7 +116,7 @@ struct LauncherView: View {
                         BackgroundView(wallpaper: wallpaper, glass: settings.background == .glass, dim: settings.dim)
                     }
                 }
-                    .opacity(model.isPresented ? 1 : 0)
+                    .opacity(model.shownAmount)
                     .gesture(pagingDrag(pageWidth: geo.size.width).exclusively(before: TapGesture().onEnded { model.backgroundTapped() }))
                     .nativeContextMenu { LauncherMenus.main(model) }
 
@@ -171,8 +171,8 @@ struct LauncherView: View {
                 .blur(radius: windowed && model.folderExpanded ? 12 : 0)
                 .opacity(model.folderExpanded || model.showHiddenApps ? (windowed ? 0.35 : 0) : 1)
                 .allowsHitTesting(folder == nil && !model.showHiddenApps)
-                .scaleEffect(model.isPresented ? 1 : 1.1)
-                .opacity(model.isPresented ? 1 : 0)
+                .scaleEffect(1.1 - 0.1 * model.shownAmount)
+                .opacity(model.shownAmount)
 
                 if model.dragOutHint {
                     NoticeToast(text: String(localized: "拖到屏幕底边，可放到程序坞、访达或其他 App"), windowed: windowed)
@@ -255,7 +255,7 @@ struct LauncherView: View {
                 if windowed {
                     RoundedRectangle(cornerRadius: LauncherView.windowCornerRadius, style: .continuous)
                         .strokeBorder(.white.opacity(0.35), lineWidth: 1)
-                        .opacity(model.isPresented ? 1 : 0)
+                        .opacity(model.shownAmount)
                         .allowsHitTesting(false)
                 }
             }
