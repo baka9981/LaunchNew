@@ -2,7 +2,8 @@
 # Package a release for in-app updates:
 #   ./scripts/release.sh 0.5.0 [release-notes.md]
 # Bumps the version in Resources/Info.plist, builds, zips the app and writes a signed
-# appcast.xml into releases/v<version>/. Upload both files to a GitHub release tagged v<version>.
+# appcast.xml into releases/v<version>/, plus a drag-to-install .dmg for first installs.
+# Upload all three to a GitHub release tagged v<version>.
 # Needs GITHUB_REPO in update.conf and the update signing key in the login keychain.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -31,6 +32,10 @@ ditto -c -k --sequesterRsrc --keepParent build/LaunchNew.app "$ZIP"
     --download-url-prefix "https://github.com/$GITHUB_REPO/releases/download/v$VERSION/" \
     --embed-release-notes "$OUT"
 
+# After the appcast, so updates keep coming from the zip.
+DMG="$OUT/LaunchNew-$VERSION.dmg"
+./scripts/dmg.sh "$DMG"
+
 echo
 echo "Version $VERSION (build $BUILD) is ready. Publish it with:"
-echo "  gh release create v$VERSION $ZIP $OUT/appcast.xml --repo $GITHUB_REPO --title $VERSION"
+echo "  gh release create v$VERSION $DMG $ZIP $OUT/appcast.xml --repo $GITHUB_REPO --title $VERSION"

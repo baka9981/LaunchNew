@@ -39,7 +39,7 @@ macOS 26 では Launchpad が「アプリ」ウインドウに置き換わりま
 
 ## インストール
 
-1. [最新リリース](https://github.com/baka9981/LaunchNew/releases/latest) から **LaunchNew-x.y.z.zip** をダウンロードし、`LaunchNew.app` を「アプリケーション」に移動します。
+1. [最新リリース](https://github.com/baka9981/LaunchNew/releases/latest) から **LaunchNew-x.y.z.dmg** をダウンロードして開き、LaunchNew を「アプリケーション」にドラッグします。
 2. 初回起動時に開発元を確認できないと表示されたら、**システム設定 › プライバシーとセキュリティ** で **このまま開く** をクリックします。
 3. **⌥Space** で開きます。何もないところを右クリックするか **⌘,** で設定を開きます。
 

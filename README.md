@@ -39,7 +39,7 @@ macOS 26 replaced Launchpad with the Apps window. LaunchNew brings back the full
 
 ## Install
 
-1. Download **LaunchNew-x.y.z.zip** from the [latest release](https://github.com/baka9981/LaunchNew/releases/latest) and move `LaunchNew.app` to **Applications**.
+1. Download **LaunchNew-x.y.z.dmg** from the [latest release](https://github.com/baka9981/LaunchNew/releases/latest), open it and drag LaunchNew onto **Applications**.
 2. On first launch macOS may say it can’t verify the developer: open **System Settings › Privacy & Security** and click **Open Anyway**.
 3. Press **⌥Space** to open. Right-click empty space or press **⌘,** for settings.
 

@@ -39,7 +39,7 @@ macOS 26 用「應用程式」視窗取代了啟動台。LaunchNew 把熟悉的�
 
 ## 安裝
 
-1. 從 [最新版本](https://github.com/baka9981/LaunchNew/releases/latest) 下載 **LaunchNew-x.y.z.zip**，把 `LaunchNew.app` 拖進「應用程式」。
+1. 從 [最新版本](https://github.com/baka9981/LaunchNew/releases/latest) 下載 **LaunchNew-x.y.z.dmg**，打開後把 LaunchNew 拖到「應用程式」。
 2. 首次打開如果提示無法驗證開發者：打開 **系統設定 › 隱私權與安全性**，點 **強制打開**。
 3. 按 **⌥Space** 打開。右鍵空白處或按 **⌘,** 進入設定。
 
