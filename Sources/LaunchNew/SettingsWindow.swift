@@ -467,8 +467,14 @@ struct AppearanceTab: View {
         }
         SettingsSection(title: String(localized: "图标")) {
             Card {
-                Row(title: String(localized: "隐藏名称")) {
+                Row(title: String(localized: "隐藏 App 名称")) {
                     Toggle("", isOn: $settings.hideNames).toggleStyle(.switch).labelsHidden()
+                }
+                Row(title: String(localized: "隐藏文件夹名称")) {
+                    Toggle("", isOn: $settings.hideFolderNames).toggleStyle(.switch).labelsHidden()
+                }
+                Row(title: String(localized: "动态日历图标"), subtitle: String(localized: "「日历」的图标显示今天的日期")) {
+                    Toggle("", isOn: $settings.dynamicCalendar).toggleStyle(.switch).labelsHidden()
                 }
                 Row(title: String(localized: "新 App 标记"), subtitle: String(localized: "新安装的 App 图标下方亮起蓝色灯带，打开一次后熄灭")) {
                     Toggle("", isOn: $settings.showNewDot).toggleStyle(.switch).labelsHidden()
@@ -503,8 +509,13 @@ struct AppearanceTab: View {
                     }
                 }
                 if settings.background != .glass && settings.displayMode == .fullScreen {
-                    Row(title: String(localized: "模糊壁纸")) {
-                        Slider(value: $settings.blur, in: 10...240).frame(width: 220)
+                    Row(title: String(localized: "模糊壁纸"), subtitle: String(localized: "拖到最左边关闭模糊")) {
+                        Slider(value: $settings.blur, in: 0...240).frame(width: 220)
+                    }
+                }
+                if settings.background == .glass && settings.displayMode == .fullScreen {
+                    Row(title: String(localized: "玻璃强度")) {
+                        Slider(value: $settings.glassStrength, in: 0.2...1).frame(width: 220)
                     }
                 }
                 Row(title: String(localized: "暗度")) {

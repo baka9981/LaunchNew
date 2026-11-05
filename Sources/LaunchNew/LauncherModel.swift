@@ -233,7 +233,7 @@ final class LauncherModel {
     var pageCount: Int { max(1, pages.count) }
     var metrics: GridMetrics {
         GridMetrics(size: screenSize, columns: columns, rows: rows, windowed: settings.displayMode == .window,
-                    paged: settings.browseStyle == .paged, frequentRow: settings.showFrequent, folderItemCount: openFolder?.1.count ?? 0, hideNames: settings.hideNames)
+                    paged: settings.browseStyle == .paged, frequentRow: settings.showFrequent, folderItemCount: openFolder?.1.count ?? 0, hideNames: settings.hideNames && settings.hideFolderNames)
     }
 
     // MARK: State used by the extensions in LauncherModel+*.swift (stored properties must live here)

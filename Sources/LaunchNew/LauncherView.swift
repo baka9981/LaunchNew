@@ -107,13 +107,14 @@ struct LauncherView: View {
             let metrics = GridMetrics(size: geo.size, columns: model.columns, rows: model.rows,
                                       windowed: windowed, paged: settings.browseStyle == .paged,
                                       frequentRow: settings.showFrequent,
-                                      folderItemCount: folder?.1.count ?? 0, hideNames: settings.hideNames)
+                                      folderItemCount: folder?.1.count ?? 0, hideNames: settings.hideNames && settings.hideFolderNames)
             ZStack(alignment: .top) {
                 Group {
                     if windowed {
                         WindowGlass()
                     } else {
-                        BackgroundView(wallpaper: wallpaper, glass: settings.background == .glass, dim: settings.dim)
+                        BackgroundView(wallpaper: wallpaper, glass: settings.background == .glass,
+                                       glassStrength: settings.glassStrength, dim: settings.dim)
                     }
                 }
                     .opacity(model.shownAmount)
@@ -483,7 +484,7 @@ struct EntryView: View {
                 .font(.system(size: metrics.labelSize))
                 .foregroundStyle(metrics.windowed ? AnyShapeStyle(.primary) : AnyShapeStyle(.white.opacity(0.95)))
                 .shadow(color: .black.opacity(metrics.windowed ? 0 : 0.28), radius: 2, y: 0.5)
-                .opacity(showsLabel ? 1 : 0)
+                .opacity(showsLabel && !nameHidden ? 1 : 0)
             }
             // No frame(maxWidth:) or contentShape on the stack: either would stretch the
             // clickable area across the whole cell. Only the icon and text are hit.
@@ -509,6 +510,11 @@ struct EntryView: View {
                 ? LauncherMenus.selection(model)
                 : LauncherMenus.entry(entry, model: model, folderID: folderID)
         }
+    }
+
+    /// App and folder names can be hidden separately; the space stays while either shows.
+    private var nameHidden: Bool {
+        if case .folder = entry { model.settings.hideFolderNames } else { model.settings.hideNames }
     }
 
     private func accessibilityLabel(isNew: Bool, running: Bool) -> String {

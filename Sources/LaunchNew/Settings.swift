@@ -159,7 +159,11 @@ final class Settings {
     var folderBrowseStyle: BrowseStyle { didSet { save(folderBrowseStyle.rawValue, "folderBrowseStyle") } }
     var columns: Int { didSet { save(columns, "columns") } }
     var rows: Int { didSet { save(rows, "rows") } }
+    /// Names under app icons.
     var hideNames: Bool { didSet { save(hideNames, "hideNames") } }
+    var hideFolderNames: Bool { didSet { save(hideFolderNames, "hideFolderNames") } }
+    /// Calendar's icon shows today's date.
+    var dynamicCalendar: Bool { didSet { save(dynamicCalendar, "dynamicCalendar") } }
     /// A blue dot before the names of newly installed apps, until they're first opened.
     var showNewDot: Bool { didSet { save(showNewDot, "showNewDot") } }
     /// A small dot under apps that are running.
@@ -175,6 +179,8 @@ final class Settings {
     var blur: Double { didSet { save(blur, "blur") } }
     /// Black overlay on the background, 0…0.6.
     var dim: Double { didSet { save(dim, "dim") } }
+    /// Frosted glass background's opacity, 0.2…1.
+    var glassStrength: Double { didSet { save(glassStrength, "glassStrength") } }
 
     // Apps
     /// Extra folders scanned for apps, besides the default ones.
@@ -228,6 +234,8 @@ final class Settings {
         columns = min(10, max(4, value("columns", 7)))
         rows = min(8, max(3, value("rows", 5)))
         hideNames = value("hideNames", false)
+        hideFolderNames = value("hideFolderNames", value("hideNames", false))
+        dynamicCalendar = value("dynamicCalendar", true)
         showNewDot = value("showNewDot", true)
         showRunningDot = value("showRunningDot", true)
         showBadges = value("showBadges", true)
@@ -236,6 +244,7 @@ final class Settings {
         background = BackgroundKind(rawValue: value("background", "")) ?? .wallpaper
         blur = value("blur", 38.0)
         dim = value("dim", 0.2)
+        glassStrength = min(1, max(0.2, value("glassStrength", 1.0)))
 
         extraAppFolders = value("extraAppFolders", [String]())
         hiddenDotEntrance = value("hiddenDotEntrance", true)

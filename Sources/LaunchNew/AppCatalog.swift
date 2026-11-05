@@ -73,6 +73,7 @@ final class AppCatalog {
     /// last scan, or (at most every few seconds) when sorting by usage needs fresh Spotlight dates.
     func reload(force: Bool = false, then done: (([AppItem]) -> Void)? = nil) {
         watchFolders()
+        if calendarDay != CalendarIcon.today { refreshDynamicIcons() }
         if isScanning {
             // A forced refresh may reflect an installation or a changed search folder
             // that the in-flight scan has already passed.
@@ -119,6 +120,15 @@ final class AppCatalog {
         return true
     }
 
+    /// The day the Calendar icon was last drawn for.
+    @ObservationIgnored private var calendarDay = ""
+
+    /// Redraws icons that change by themselves (Calendar's date), or after their setting changed.
+    func refreshDynamicIcons() {
+        updateSources()
+        loadMissingIcons()
+    }
+
     /// (Re)starts watching when the set of app folders changes.
     private func watchFolders() {
         let paths = folderPaths()
@@ -158,6 +168,10 @@ final class AppCatalog {
     /// Applies the user's icons to the scanned sources and drops cached icons whose source changed.
     private func updateSources() {
         var sources = scannedSources.merging(customSources) { _, new in new }
+        calendarDay = CalendarIcon.today
+        if Settings.shared.dynamicCalendar, sources[CalendarIcon.bundleID] != nil {
+            sources[CalendarIcon.bundleID] = IconSource(path: CalendarIcon.prefix + calendarDay, modified: nil)
+        }
         for (id, path) in iconOverrides where sources[id] != nil {
             sources[id] = IconSource(path: path, modified: nil)
         }

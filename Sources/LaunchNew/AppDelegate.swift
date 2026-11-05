@@ -107,6 +107,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         case "appIcon":
             NSApp.applicationIconImage = IconArt.image(settings.appIcon)
+        case "dynamicCalendar":
+            launcher.catalog.refreshDynamicIcons()
         case "columns", "rows", "sortOrder", "browseStyle", "folderBrowseStyle":
             launcher.model.settingsChanged()
         case "autoBackupCount":

@@ -39,9 +39,12 @@ final class WallpaperProvider {
 
     /// Aspect-fills the wallpaper at a third of the screen size, then blurs it.
     /// The low resolution is invisible under a heavy blur and keeps this fast.
+    /// With the blur off, the picture is kept sharp at Retina resolution instead.
     nonisolated private static func blurred(url: URL, target: CGSize, blur: Double, context: CIContext) -> CGImage? {
-        let outW = max(1, (target.width / 3).rounded())
-        let outH = max(1, (target.height / 3).rounded())
+        let sharp = blur < 1
+        let factor: CGFloat = sharp ? 2 : 1.0 / 3
+        let outW = max(1, (target.width * factor).rounded())
+        let outH = max(1, (target.height * factor).rounded())
         guard let decoded = decode(url: url, fill: CGSize(width: outW, height: outH)) else { return nil }
         let source = CIImage(cgImage: decoded)
         guard source.extent.width > 0, source.extent.height > 0 else { return nil }
@@ -52,10 +55,10 @@ final class WallpaperProvider {
             y: scaled.extent.minY + (scaled.extent.height - outH) / 2,
             width: outW, height: outH
         )
-        let output = scaled.cropped(to: crop)
+        let output = (sharp ? scaled.cropped(to: crop) : scaled.cropped(to: crop)
             .clampedToExtent()
             .applyingGaussianBlur(sigma: blur / 3)
-            .cropped(to: crop)
+            .cropped(to: crop))
             .applyingFilter("CIColorControls", parameters: [kCIInputSaturationKey: 1.05, kCIInputContrastKey: 1.08, kCIInputBrightnessKey: -0.03])
         return context.createCGImage(output, from: crop)
     }
@@ -85,6 +88,8 @@ struct BackgroundView: View {
     let wallpaper: WallpaperProvider
     /// Frosted glass over what's behind the window instead of the wallpaper.
     var glass = false
+    /// How much of the frosted glass covers what's behind, 0…1.
+    var glassStrength = 1.0
     var dim = 0.2
 
     var body: some View {
@@ -98,6 +103,7 @@ struct BackgroundView: View {
             } else {
                 // Wallpaper unreadable (e.g. video or rotating folder): blur what's behind instead.
                 VisualEffectBackground()
+                    .opacity(glass ? glassStrength : 1)
             }
             Color.black.opacity(dim)
         }

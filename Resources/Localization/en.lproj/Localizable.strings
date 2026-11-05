@@ -270,7 +270,6 @@
 "隐形空位" = "Invisible slot";
 "隐藏" = "Hide";
 "隐藏 LaunchNew" = "Hide LaunchNew";
-"隐藏名称" = "Hide names";
 "隐藏后，可以再次打开 LaunchNew.app 或在启动台的 ⋯ 菜单里进入设置" = "When hidden, open LaunchNew.app again or use the ⋯ menu in the launcher to reach Settings";
 "隐藏的 App" = "Hidden Apps";
 "隐藏的应用" = "Hidden Apps";
@@ -449,3 +448,9 @@
 "30 秒后" = "After 30 seconds";
 "15 分钟后" = "After 15 minutes";
 "1 小时后" = "After 1 hour";
+"隐藏 App 名称" = "Hide app names";
+"隐藏文件夹名称" = "Hide folder names";
+"动态日历图标" = "Live Calendar icon";
+"「日历」的图标显示今天的日期" = "Calendar's icon shows today's date";
+"拖到最左边关闭模糊" = "Drag all the way left to turn blur off";
+"玻璃强度" = "Glass intensity";
