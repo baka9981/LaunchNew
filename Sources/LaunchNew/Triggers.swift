@@ -266,6 +266,34 @@ final class TrackpadPinch {
     }
 }
 
+/// The system's own Hot Corners (Desktop & Dock settings), read-only.
+enum SystemHotCorners {
+    private static func key(_ corner: HotCorner) -> String? {
+        switch corner {
+        case .topLeft: "tl"
+        case .topRight: "tr"
+        case .bottomLeft: "bl"
+        case .bottomRight: "br"
+        case .off: nil
+        }
+    }
+
+    /// Whether macOS also does something when the pointer reaches this corner without a modifier key.
+    static func isTaken(_ corner: HotCorner, defaults: UserDefaults? = UserDefaults(suiteName: "com.apple.dock")) -> Bool {
+        guard let key = key(corner), let defaults else { return false }
+        // 0 and 1 mean no action.
+        let action = defaults.integer(forKey: "wvous-\(key)-corner")
+        let modifier = defaults.integer(forKey: "wvous-\(key)-modifier")
+        return action > 1 && modifier == 0
+    }
+
+    static func openSettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.Desktop-Settings.extension") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+}
+
 /// Toggles the launcher when the pointer is pushed into a screen corner.
 /// Driven by mouse-move events, so it costs nothing while the pointer is still.
 @MainActor
@@ -295,19 +323,41 @@ final class HotCornerWatcher {
         }) { monitors.append(m) }
     }
 
-    /// Distance from the pointer to the watched corner of the screen it's on.
+    /// Distance from the pointer to the watched corner of the screen it's on. With several
+    /// displays, a corner that touches another display doesn't count: the pointer passes
+    /// through it instead of stopping there.
     private func distance() -> CGFloat {
         let p = NSEvent.mouseLocation
-        guard let screen = NSScreen.screens.first(where: { NSMouseInRect(p, $0.frame, false) }) else { return .infinity }
-        let f = screen.frame
-        let target: CGPoint = switch corner {
+        let screens = NSScreen.screens.map(\.frame)
+        guard let frame = screens.first(where: { NSMouseInRect(p, $0, false) }),
+              let target = Self.point(of: corner, in: frame),
+              Self.isOuterCorner(corner, of: frame, among: screens) else { return .infinity }
+        return max(abs(p.x - target.x), abs(p.y - target.y))
+    }
+
+    nonisolated static func point(of corner: HotCorner, in f: CGRect) -> CGPoint? {
+        switch corner {
         case .topLeft: CGPoint(x: f.minX, y: f.maxY)
         case .topRight: CGPoint(x: f.maxX, y: f.maxY)
         case .bottomLeft: CGPoint(x: f.minX, y: f.minY)
         case .bottomRight: CGPoint(x: f.maxX, y: f.minY)
-        case .off: CGPoint(x: CGFloat.infinity, y: .infinity)
+        case .off: nil
         }
-        return max(abs(p.x - target.x), abs(p.y - target.y))
+    }
+
+    /// Whether no other display lies just past the corner, sideways or up/down from it.
+    nonisolated static func isOuterCorner(_ corner: HotCorner, of frame: CGRect, among screens: [CGRect]) -> Bool {
+        guard let c = point(of: corner, in: frame) else { return false }
+        let left = corner == .topLeft || corner == .bottomLeft
+        let top = corner == .topLeft || corner == .topRight
+        // Points one step outside the screen next to the corner, still level with its edge.
+        let inX: CGFloat = left ? 1 : -1, inY: CGFloat = top ? -1 : 1
+        let beyond = [
+            CGPoint(x: c.x - inX * 2, y: c.y + inY * 2),  // sideways
+            CGPoint(x: c.x + inX * 2, y: c.y - inY * 2),  // up or down
+            CGPoint(x: c.x - inX * 2, y: c.y - inY * 2),  // diagonally
+        ]
+        return !screens.contains { other in other != frame && beyond.contains { other.contains($0) } }
     }
 
     private func check() {

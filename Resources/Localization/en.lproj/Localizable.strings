@@ -123,7 +123,6 @@
 "打开设置" = "Open Settings";
 "把 LaunchNew 拖进「%@」列表" = "Drag LaunchNew into the “%@” list";
 "把一个 App 拖到另一个上面就会建立文件夹。拖到屏幕边缘可以翻到别的页面。" = "Drop one app onto another to make a folder. Drag to the edge of the screen to move to another page.";
-"把指针推到屏幕角落时打开或关闭" = "Open or close when the pointer reaches a screen corner";
 "抖动时显示 ✕" = "Show ✕ while jiggling";
 "抖动模式（长按或按住 ⌥）下，可删除的 App 左上角显示 ✕" = "In jiggle mode (long press or hold ⌥), removable apps show ✕ in the top-left corner";
 "拖动整理" = "Drag to Organize";
@@ -439,3 +438,6 @@
 "包括拇指" = "Thumb included";
 "捏合手指数" = "Pinch fingers";
 "捏合打开，张开关闭，界面跟随手指；松手时过半就完成，否则退回。建议在「系统设置 › 触控板 › 更多手势」里关掉系统自带的同一手势。" = "Pinch to open, spread to close; the launcher follows your fingers and finishes if you let go past halfway. Consider turning off the same system gesture in System Settings › Trackpad › More Gestures.";
+"把指针推到屏幕角落时打开或关闭。多台显示器时，只有不与其他显示器相邻的角落会响应。" = "Open or close by pushing the pointer into a screen corner. With several displays, only corners that don't touch another display respond.";
+"这个角落已设置了系统的触发角，两者会同时触发。" = "macOS already uses this corner as a Hot Corner, so both will trigger.";
+"打开系统设置" = "Open System Settings";

@@ -270,8 +270,21 @@ struct GeneralTab: View {
                         }
                     }
                 }
-                Row(title: String(localized: "触发角"), subtitle: String(localized: "把指针推到屏幕角落时打开或关闭")) {
+                Row(title: String(localized: "触发角"), subtitle: String(localized: "把指针推到屏幕角落时打开或关闭。多台显示器时，只有不与其他显示器相邻的角落会响应。")) {
                     MenuPicker(selection: $settings.hotCorner, options: HotCorner.allCases, title: \.title)
+                }
+                if SystemHotCorners.isTaken(settings.hotCorner) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                        Text(String(localized: "这个角落已设置了系统的触发角，两者会同时触发。"))
+                            .font(.system(size: 11)).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 8)
+                        Button(String(localized: "打开系统设置")) { SystemHotCorners.openSettings() }
+                            .controlSize(.small)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 10)
                 }
             }
         }
