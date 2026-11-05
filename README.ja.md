@@ -10,6 +10,7 @@
 ![macOS](https://img.shields.io/badge/macOS-26%2B-111?style=flat-square&logo=apple)
 ![Swift](https://img.shields.io/badge/Swift-6-F05138?style=flat-square&logo=swift&logoColor=white)
 [![Downloads](https://img.shields.io/github/downloads/baka9981/LaunchNew/total?style=flat-square&color=34C759)](https://github.com/baka9981/LaunchNew/releases)
+[![License](https://img.shields.io/badge/license-MIT-8E8E93?style=flat-square)](LICENSE)
 
 <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.zh-TW.md">繁體中文</a> · <a href="README.ja.md">日本語</a>
 
