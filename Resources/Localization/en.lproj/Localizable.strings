@@ -280,7 +280,11 @@
 "隐藏程序坞" = "Hide Dock";
 "需要在「系统设置 › 通用 › 登录项」里允许" = "Needs to be allowed in System Settings › General › Login Items";
 "音乐" = "Music";
-"验证后显示" = "Verify to Show";
+"验证后修改" = "Verify to Change";
+"入口、暗号和验证方式都已锁定" = "Entrances, passphrase and verification are locked";
+"修改隐藏的 App 设置" = "change hidden app settings";
+"导入布局备份" = "import a layout backup";
+"恢复布局备份" = "restore a layout backup";
 "高级" = "Advanced";
 "默认路径：/Applications、/System/Applications、~/Applications" = "Default locations: /Applications, /System/Applications, ~/Applications";
 "鼠标所在屏幕" = "Display with the pointer";

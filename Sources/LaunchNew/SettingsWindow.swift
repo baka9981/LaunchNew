@@ -599,67 +599,70 @@ struct AppsTab: View {
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         SettingsSection(title: String(localized: "隐藏的应用")) {
-            Card {
-                Row(title: String(localized: "隐形圆点"), subtitle: String(localized: "最后一个分页圆点后面，鼠标移上去才会出现")) {
-                    Toggle("", isOn: $settings.hiddenDotEntrance).toggleStyle(.switch).labelsHidden()
-                }
-                Row(title: String(localized: "隐形空位"), subtitle: String(localized: "在所选页最后一个 App 后面的空位上右键，点击出现的虚线框")) {
-                    HStack(spacing: 8) {
-                        Picker("", selection: $settings.hiddenSlotPage) {
-                            Text("最后一页").tag(0)
-                            ForEach(1...max(1, model.pageCount), id: \.self) { Text("第 \($0) 页").tag($0) }
-                        }
-                        .labelsHidden().fixedSize()
-                        .disabled(!settings.hiddenSlotEntrance)
-                        Toggle("", isOn: $settings.hiddenSlotEntrance).toggleStyle(.switch).labelsHidden()
-                    }
-                }
-                Row(title: String(localized: "暗号"), subtitle: String(localized: "在搜索框输入暗号即可打开，留空则关闭")) {
-                    SecureField(String(localized: "未设置"), text: $settings.hiddenPhrase)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 140)
-                }
-            }
-            Card {
-                Row(title: String(localized: "打开前验证"), subtitle: String(localized: "使用触控 ID 或登录密码")) {
-                    Toggle("", isOn: $settings.hiddenRequireAuth).toggleStyle(.switch).labelsHidden()
-                }
-                Row(title: String(localized: "关闭启动台后重新隐藏"), subtitle: String(localized: "关闭时，下次需要重新通过入口打开")) {
-                    Toggle("", isOn: $settings.hiddenRelock).toggleStyle(.switch).labelsHidden()
-                }
-            }
             let hidden = model.hiddenApps
-            if !model.hiddenUnlocked, !hidden.isEmpty {
+            if model.hiddenGuarded {
                 VStack(spacing: 10) {
                     Image(systemName: "lock").font(.system(size: 22)).foregroundStyle(.secondary)
                     Text("\(hidden.count) 个隐藏的 App").font(.system(size: 13, weight: .medium))
-                    Button(settings.hiddenRequireAuth ? String(localized: "验证后显示") : String(localized: "显示")) { model.unlockHiddenForSettings() }
+                    Text("入口、暗号和验证方式都已锁定").font(.system(size: 12)).foregroundStyle(.secondary)
+                    Button(String(localized: "验证后修改")) { model.whenHiddenUnlocked() }
                         .controlSize(.small)
                 }
-                .frame(maxWidth: .infinity, minHeight: 140)
-                .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            } else if hidden.isEmpty {
-                VStack(spacing: 6) {
-                    Text("暂无应用").font(.system(size: 15, weight: .medium))
-                    Text("右键点击应用即可隐藏").font(.system(size: 12)).foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, minHeight: 200)
+                .frame(maxWidth: .infinity, minHeight: 160)
                 .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             } else {
                 Card {
-                    ForEach(hidden) { app in
-                        HStack(spacing: 10) {
-                            if let icon = model.catalog.icons[app.id] {
-                                Image(decorative: icon, scale: 2).resizable().frame(width: 28, height: 28)
-                            } else {
-                                Image(nsImage: NSWorkspace.shared.icon(forFile: app.url.path)).resizable().frame(width: 28, height: 28)
+                    Row(title: String(localized: "隐形圆点"), subtitle: String(localized: "最后一个分页圆点后面，鼠标移上去才会出现")) {
+                        Toggle("", isOn: $settings.hiddenDotEntrance).toggleStyle(.switch).labelsHidden()
+                    }
+                    Row(title: String(localized: "隐形空位"), subtitle: String(localized: "在所选页最后一个 App 后面的空位上右键，点击出现的虚线框")) {
+                        HStack(spacing: 8) {
+                            Picker("", selection: $settings.hiddenSlotPage) {
+                                Text("最后一页").tag(0)
+                                ForEach(1...max(1, model.pageCount), id: \.self) { Text("第 \($0) 页").tag($0) }
                             }
-                            Text(app.name).font(.system(size: 13))
-                            Spacer()
-                            Button(String(localized: "取消隐藏")) { model.setHidden(false, for: app.id) }.controlSize(.small)
+                            .labelsHidden().fixedSize()
+                            .disabled(!settings.hiddenSlotEntrance)
+                            Toggle("", isOn: $settings.hiddenSlotEntrance).toggleStyle(.switch).labelsHidden()
                         }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
+                    }
+                    Row(title: String(localized: "暗号"), subtitle: String(localized: "在搜索框输入暗号即可打开，留空则关闭")) {
+                        SecureField(String(localized: "未设置"), text: $settings.hiddenPhrase)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 140)
+                    }
+                }
+                Card {
+                    Row(title: String(localized: "打开前验证"), subtitle: String(localized: "使用触控 ID 或登录密码")) {
+                        Toggle("", isOn: $settings.hiddenRequireAuth).toggleStyle(.switch).labelsHidden()
+                    }
+                    Row(title: String(localized: "关闭启动台后重新隐藏"), subtitle: String(localized: "关闭时，下次需要重新通过入口打开")) {
+                        Toggle("", isOn: $settings.hiddenRelock).toggleStyle(.switch).labelsHidden()
+                    }
+                }
+                if hidden.isEmpty {
+                    VStack(spacing: 6) {
+                        Text("暂无应用").font(.system(size: 15, weight: .medium))
+                        Text("右键点击应用即可隐藏").font(.system(size: 12)).foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 200)
+                    .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                } else {
+                    Card {
+                        ForEach(hidden) { app in
+                            HStack(spacing: 10) {
+                                if let icon = model.catalog.icons[app.id] {
+                                    Image(decorative: icon, scale: 2).resizable().frame(width: 28, height: 28)
+                                } else {
+                                    Image(nsImage: NSWorkspace.shared.icon(forFile: app.url.path)).resizable().frame(width: 28, height: 28)
+                                }
+                                Text(app.name).font(.system(size: 13))
+                                Spacer()
+                                Button(String(localized: "取消隐藏")) { model.setHidden(false, for: app.id) }.controlSize(.small)
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                        }
                     }
                 }
             }
@@ -823,7 +826,10 @@ struct AdvancedTab: View {
         panel.allowedContentTypes = [.json]
         guard Modal.run({ panel.runModal() }) == .OK, let url = panel.url else { return }
         confirm(String(localized: "导入这个布局备份？"), String(localized: "会替换当前的布局、文件夹和 App 设置。"), button: String(localized: "导入")) {
-            do { try model.importBackup(from: url) } catch { fail(String(localized: "导入失败"), error) }
+            // A backup can unhide apps, so it needs the same verification as showing them.
+            model.whenHiddenUnlocked(reason: String(localized: "导入布局备份")) {
+                do { try model.importBackup(from: url) } catch { fail(String(localized: "导入失败"), error) }
+            }
         }
     }
 
@@ -869,8 +875,10 @@ struct AdvancedTab: View {
     private func restore(_ entry: AutoBackup.Entry) {
         let when = entry.date.formatted(date: .abbreviated, time: .standard)
         confirm(String(localized: "恢复 \(when) 的布局？"), String(localized: "会替换当前的布局、文件夹和 App 设置。当前布局也已自动备份，可以随时换回来。"), button: String(localized: "恢复")) {
-            AutoBackup.snapshot()
-            do { try model.importBackup(from: entry.url) } catch { fail(String(localized: "恢复失败"), error) }
+            model.whenHiddenUnlocked(reason: String(localized: "恢复布局备份")) {
+                AutoBackup.snapshot()
+                do { try model.importBackup(from: entry.url) } catch { fail(String(localized: "恢复失败"), error) }
+            }
         }
     }
 

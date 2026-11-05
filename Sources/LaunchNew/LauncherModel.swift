@@ -765,18 +765,26 @@ final class LauncherModel {
         refresh()
     }
 
-    /// Verifies before showing the hidden apps list in settings.
-    func unlockHiddenForSettings() {
-        guard !hiddenUnlocked, !isAuthenticating else { return }
+    /// True while hidden apps exist behind verification that hasn't been passed yet. Then
+    /// their settings, and anything that could unhide them, need the same verification,
+    /// or turning verification off or changing the passphrase would get round it.
+    var hiddenGuarded: Bool {
+        settings.hiddenRequireAuth && !hiddenUnlocked && !hiddenApps.isEmpty
+    }
+
+    /// Runs `action` straight away, or after Touch ID or the password while `hiddenGuarded`.
+    /// Passing also unlocks the hidden apps, as opening them would.
+    func whenHiddenUnlocked(reason: String = String(localized: "修改隐藏的 App 设置"), _ action: @escaping () -> Void = {}) {
+        guard hiddenGuarded else { return action() }
+        guard !isAuthenticating else { return }
         Task { @MainActor in
-            if settings.hiddenRequireAuth {
-                isAuthenticating = true
-                let ok = await OwnerAuth.verify(reason: String(localized: "显示隐藏的 App"))
-                isAuthenticating = false
-                guard ok else { return }
-            }
+            isAuthenticating = true
+            let ok = await OwnerAuth.verify(reason: reason)
+            isAuthenticating = false
+            guard ok else { return }
             hiddenUnlocked = true
             refresh()
+            action()
         }
     }
 

@@ -4,6 +4,23 @@ import Testing
 
 /// Shares the serialized suite with other users of LayoutStore.directoryOverride.
 extension AutoBackupTests {
+    /// With apps hidden behind verification, their settings and backup restores are locked too.
+    @Test @MainActor func hiddenSettingsLockedWhileHiddenAppsNeedVerification() async throws {
+        try await withFolderFixture { model in
+            var ran = false
+            model.whenHiddenUnlocked { ran = true }
+            #expect(!model.hiddenGuarded && ran, "nothing hidden yet: no verification")
+
+            model.setHidden(true, for: "fixture-1")
+            #expect(model.hiddenGuarded)
+
+            model.settings.hiddenRequireAuth = false
+            ran = false
+            model.whenHiddenUnlocked { ran = true }
+            #expect(!model.hiddenGuarded && ran, "verification turned off: nothing to guard")
+        }
+    }
+
     @Test @MainActor func folderScrollClampsBothEndsWithOneHundredApps() async throws {
         try await withFolderFixture { model in
             model.scrollFolder(by: 100_000)
