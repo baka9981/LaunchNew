@@ -1,0 +1,64 @@
+<div align="center">
+
+<img src="docs/images/icon.png" width="128" alt="LaunchNew">
+
+# LaunchNew
+
+**經典啟動台，回到 macOS 26。永久免費。**
+
+[![Release](https://img.shields.io/github/v/release/baka9981/LaunchNew?style=flat-square&color=0A84FF)](https://github.com/baka9981/LaunchNew/releases/latest)
+![macOS](https://img.shields.io/badge/macOS-26%2B-111?style=flat-square&logo=apple)
+![Swift](https://img.shields.io/badge/Swift-6-F05138?style=flat-square&logo=swift&logoColor=white)
+[![Downloads](https://img.shields.io/github/downloads/baka9981/LaunchNew/total?style=flat-square&color=34C759)](https://github.com/baka9981/LaunchNew/releases)
+
+<a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.zh-TW.md">繁體中文</a> · <a href="README.ja.md">日本語</a>
+
+<img src="docs/images/whats-new.png" width="49%" alt="新功能"> <img src="docs/images/guide.png" width="49%" alt="使用引導">
+
+</div>
+
+## 為什麼做它
+
+macOS 26 用「應用程式」視窗取代了啟動台。LaunchNew 把熟悉的全螢幕網格找回來——翻頁、檔案夾、拖動整理、打字搜尋——再補上啟動台從來沒有的功能。
+
+## 功能
+
+| | |
+|---|---|
+| 🚀 **原汁原味** | 全螢幕模糊網格、翻頁、檔案夾、抖動模式；⌥Space / F4 / 觸控板捏合 / 觸發角喚起 |
+| 🔎 **更聰明的搜尋** | 拼音和首字母（`wx` → 微信）、別名、`#標籤`、智慧型檔案夾 |
+| 🧩 **自訂啟動項** | 網址、檔案、檔案夾、腳本，像 App 一樣放在網格裡 |
+| 🎨 **照你的習慣來** | 更換任意圖像、自選背景圖片、視窗或全螢幕模式、自訂行列數 |
+| 🗂 **佈局方案** | 工作、娛樂各一套頁面，從選單、連結或捷徑切換 |
+| 🔔 **即時狀態** | Dock 通知標記、執行指示、常用一列 |
+| 🧹 **乾淨解除安裝** | 連同 `~/Library` 裡的殘留一起移到垃圾桶 |
+| 🔒 **隱私安全** | 隱藏 App（Touch ID 驗證）、自動備份佈局、可選 iCloud 同步 |
+| ⚡️ **捷徑與連結** | 打開檔案夾、搜尋、切換佈局；支援 `launchnew://` |
+| 🔄 **自動更新** | 透過 Sparkle 推送簽署更新 |
+
+## 安裝
+
+1. 從 [最新版本](https://github.com/baka9981/LaunchNew/releases/latest) 下載 **LaunchNew-x.y.z.zip**，把 `LaunchNew.app` 拖進「應用程式」。
+2. 首次打開如果提示無法驗證開發者：打開 **系統設定 › 隱私權與安全性**，點 **強制打開**。
+3. 按 **⌥Space** 打開。右鍵空白處或按 **⌘,** 進入設定。
+
+需要 macOS 26 或更新版本。
+
+## 從原始碼建置
+
+```bash
+git clone https://github.com/baka9981/LaunchNew.git
+cd LaunchNew
+./scripts/run.sh
+```
+
+測試、除錯與發佈見 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。
+
+## 隱私
+
+沒有帳號、沒有統計，除了檢查更新不連網。佈局儲存在 `~/Library/Application Support/LaunchNew`；其他 App 的資料（包括系統啟動台資料庫）只讀不寫。
+
+## 免費
+
+LaunchNew 完全免費：沒有 Pro 版、沒有訂閱、沒有廣告。
+
