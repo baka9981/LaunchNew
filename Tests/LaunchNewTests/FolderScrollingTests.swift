@@ -152,6 +152,27 @@ extension AutoBackupTests {
         }
     }
 
+    @MainActor @Test func marqueePicksTheAppsItTouchesAndKeepsEarlierPicks() async throws {
+        try await withFolderFixture { model in
+            model.closeFolder()
+            model.ungroupAllFolders()
+            #expect(model.layout.joined().allSatisfy { if case .app = $0 { true } else { false } })
+            model.multiSelection = ["fixture-50"]
+            let m = model.metrics
+            model.marqueeChanged(from: CGPoint(x: m.iconCenter(slot: 0).x - 5, y: m.iconCenter(slot: 0).y - 5),
+                                 to: CGPoint(x: m.iconCenter(slot: 1).x, y: m.iconCenter(slot: 1).y))
+            let first = model.pages[0].prefix(2).compactMap { entry -> String? in
+                if case .app(let app) = entry { app.id } else { nil }
+            }
+            #expect(model.multiSelection == Set(first + ["fixture-50"]))
+            // Shrinking the rectangle drops what it no longer touches, but not the earlier pick.
+            model.marqueeChanged(from: CGPoint(x: -100, y: -100), to: CGPoint(x: -90, y: -90))
+            #expect(model.multiSelection == ["fixture-50"])
+            model.marqueeEnded()
+            #expect(model.marqueeBase == nil)
+        }
+    }
+
     @MainActor private func withFolderFixture(_ body: @MainActor (LauncherModel) async throws -> Void) async throws {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let directory = root.appendingPathComponent("work/folder-fixtures/\(UUID().uuidString)", isDirectory: true)

@@ -57,7 +57,7 @@ enum AppScanner {
         for root in roots {
             guard let enumerator = fm.enumerator(
                 at: root,
-                includingPropertiesForKeys: [.isDirectoryKey],
+                includingPropertiesForKeys: [.isDirectoryKey, .isAliasFileKey],
                 options: [.skipsPackageDescendants, .skipsHiddenFiles]
             ) else { continue }
 
@@ -66,8 +66,8 @@ enum AppScanner {
                     enumerator.skipDescendants()
                     continue
                 }
-                guard url.pathExtension == "app" else { continue }
-                guard let item = makeItem(at: url.resolvingSymlinksInPath()) else { continue }
+                guard let target = appURL(url) else { continue }
+                guard let item = makeItem(at: target) else { continue }
                 if item.bundleID != nil, item.bundleID == ownID { continue }
                 if seen.insert(item.id).inserted {
                     result.append(item)
@@ -76,6 +76,16 @@ enum AppScanner {
         }
 
         return result.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
+
+    /// The app a found item stands for: an .app bundle itself, or one a Finder alias or
+    /// symbolic link points to (an alias to an app kept elsewhere counts as installed here).
+    static func appURL(_ url: URL) -> URL? {
+        if url.pathExtension == "app" { return url.resolvingSymlinksInPath() }
+        guard (try? url.resourceValues(forKeys: [.isAliasFileKey]))?.isAliasFile == true,
+              let resolved = try? URL(resolvingAliasFileAt: url, options: [.withoutUI, .withoutMounting]),
+              resolved.pathExtension == "app" else { return nil }
+        return resolved.resolvingSymlinksInPath()
     }
 
     static func makeItem(at url: URL) -> AppItem? {

@@ -130,6 +130,10 @@ final class LauncherModel {
     @ObservationIgnored var editingFromOption = false
     /// Apps picked with ⌘-click (or the chosen modifier), acted on together.
     var multiSelection: Set<String> = []
+    /// The rectangle being dragged out on empty space to pick apps, in launcher coordinates.
+    var marquee: CGRect?
+    /// What was picked before the rectangle started; the rectangle adds to it.
+    @ObservationIgnored var marqueeBase: Set<String>?
     /// Icons can be dragged around only in the custom, paged arrangement.
     var canRearrange: Bool { settings.sortOrder == .custom && settings.browseStyle == .paged && categoryFilter == nil }
 

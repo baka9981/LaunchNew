@@ -12,6 +12,33 @@ extension LauncherModel {
         }
     }
 
+    // MARK: - Marquee
+
+    /// Picks the apps on the current page whose icons the dragged rectangle touches.
+    func marqueeChanged(from start: CGPoint, to end: CGPoint) {
+        let base = marqueeBase ?? multiSelection
+        marqueeBase = base
+        let rect = CGRect(x: min(start.x, end.x), y: min(start.y, end.y),
+                          width: abs(end.x - start.x), height: abs(end.y - start.y))
+        marquee = rect
+        guard pages.indices.contains(currentPage) else { return }
+        let m = metrics
+        let half = m.iconSize * 0.4
+        var hits = Set<String>()
+        for (slot, entry) in pages[currentPage].enumerated() {
+            guard case .app(let app) = entry else { continue }
+            let c = m.iconCenter(slot: slot)
+            if rect.intersects(CGRect(x: c.x - half, y: c.y - half, width: half * 2, height: half * 2)) { hits.insert(app.id) }
+        }
+        let picked = base.union(hits)
+        if picked != multiSelection { multiSelection = picked }
+    }
+
+    func marqueeEnded() {
+        withAnimation(.easeOut(duration: 0.12)) { marquee = nil }
+        marqueeBase = nil
+    }
+
     /// The selection, in grid order.
     var multiSelectedIDs: [String] {
         layout.joined().flatMap(\.appIDs).filter(multiSelection.contains)

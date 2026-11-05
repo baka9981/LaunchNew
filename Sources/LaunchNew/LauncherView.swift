@@ -98,6 +98,8 @@ struct LauncherView: View {
     @Bindable var model: LauncherModel
     let wallpaper: WallpaperProvider
     @FocusState private var searchFocused: Bool
+    /// The drag on empty space in progress is turning pages (not drawing a selection rectangle).
+    @State private var dragIsPaging = false
 
     var body: some View {
         GeometryReader { geo in
@@ -174,6 +176,17 @@ struct LauncherView: View {
                 .allowsHitTesting(folder == nil && !model.showHiddenApps)
                 .scaleEffect(1.1 - 0.1 * model.shownAmount)
                 .opacity(model.shownAmount)
+
+                if let rect = model.marquee {
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill(Color.accentColor.opacity(0.16))
+                        .overlay(RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .strokeBorder(Color.accentColor.opacity(0.8), lineWidth: 1))
+                        .frame(width: rect.width, height: rect.height)
+                        .position(x: rect.midX, y: rect.midY)
+                        .allowsHitTesting(false)
+                        .zIndex(4)
+                }
 
                 if model.dragOutHint {
                     NoticeToast(text: String(localized: "拖到屏幕底边，可放到程序坞、访达或其他 App"), windowed: windowed)
@@ -270,13 +283,32 @@ struct LauncherView: View {
     }
 
     static let space = "launcher"
+
+    /// Whether a drag on empty space should pick apps rather than turn pages.
+    private var wantsMarquee: Bool {
+        guard model.settings.browseStyle == .paged, model.openFolderID == nil, !model.isSearching else { return false }
+        if model.isEditing { return true }
+        guard let flag = model.settings.multiSelectKey.flag else { return false }
+        return NSEvent.modifierFlags.contains(flag)
+    }
     static let windowCornerRadius: CGFloat = 30
 
-    /// Click-and-drag on empty space flips pages, like Launchpad.
+    /// Click-and-drag on empty space flips pages, like Launchpad. With the multi-select key
+    /// held, or while the icons jiggle, it draws a rectangle that picks apps instead.
     private func pagingDrag(pageWidth: CGFloat) -> some Gesture {
-        DragGesture(minimumDistance: 6)
-            .onChanged { if model.settings.browseStyle == .paged { model.dragChanged($0.translation.width) } }
+        DragGesture(minimumDistance: 6, coordinateSpace: .named(LauncherView.space))
+            .onChanged { value in
+                // Decided when the drag starts, and kept until it ends.
+                if model.marquee != nil || (!dragIsPaging && wantsMarquee) {
+                    model.marqueeChanged(from: value.startLocation, to: value.location)
+                } else if model.settings.browseStyle == .paged {
+                    dragIsPaging = true
+                    model.dragChanged(value.translation.width)
+                }
+            }
             .onEnded { value in
+                dragIsPaging = false
+                if model.marquee != nil { model.marqueeEnded(); return }
                 guard model.settings.browseStyle == .paged else { return }
                 // A quick flick counts as a full swipe.
                 let projected = value.translation.width + (value.predictedEndTranslation.width - value.translation.width) * 0.5
