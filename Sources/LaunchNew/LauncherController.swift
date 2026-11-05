@@ -359,6 +359,7 @@ final class LauncherController {
         switch settings.targetScreen {
         case .main: return screens.first ?? NSScreen.main ?? underMouse!
         case .mouse: return underMouse ?? NSScreen.main ?? screens[0]
+        case .active: return Self.activeWindowScreen(screens) ?? underMouse ?? NSScreen.main ?? screens[0]
         case .dock: break
         }
         if screens.count > 1, let dockScreen = screens.first(where: { screen in
@@ -368,6 +369,24 @@ final class LauncherController {
             return dockScreen
         }
         return underMouse ?? NSScreen.main ?? screens[0]
+    }
+
+    /// The display showing the frontmost app's front window.
+    private static func activeWindowScreen(_ screens: [NSScreen]) -> NSScreen? {
+        guard let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier,
+              pid != ProcessInfo.processInfo.processIdentifier,
+              let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
+                as? [[String: Any]] else { return nil }
+        // Front to back; layer 0 is ordinary windows.
+        guard let info = windows.first(where: {
+            ($0[kCGWindowOwnerPID as String] as? pid_t) == pid && ($0[kCGWindowLayer as String] as? Int) == 0
+        }), let dict = info[kCGWindowBounds as String] as? NSDictionary,
+              let bounds = CGRect(dictionaryRepresentation: dict) else { return nil }
+        // Window bounds are top-down from the primary display; screens are bottom-up.
+        let primaryHeight = screens.first?.frame.height ?? 0
+        let center = CGPoint(x: bounds.midX, y: primaryHeight - bounds.midY)
+        return screens.first { $0.frame.contains(center) }
+            ?? screens.max { $0.frame.intersection(bounds).width < $1.frame.intersection(bounds).width }
     }
 
     // MARK: - Dragging out

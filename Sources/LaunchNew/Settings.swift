@@ -7,8 +7,12 @@ enum SortOrder: String, CaseIterable { case custom, name, recentlyAdded, recentl
 enum BrowseStyle: String, CaseIterable { case paged, scroll }
 enum BackgroundKind: String, CaseIterable { case wallpaper, glass, image }
 enum HotCorner: String, CaseIterable { case off, topLeft, topRight, bottomLeft, bottomRight }
-enum TargetScreen: String, CaseIterable { case dock, mouse, main }
-enum ReturnHome: Int, CaseIterable { case immediately = 0, oneMinute = 60, fiveMinutes = 300, never = -1 }
+enum TargetScreen: String, CaseIterable { case dock, mouse, active, main }
+enum ReturnHome: Int, CaseIterable {
+    case immediately = 0, thirtySeconds = 30, oneMinute = 60, fiveMinutes = 300, fifteenMinutes = 900, oneHour = 3600, never = -1
+}
+/// What the Dock icon's menu lists.
+enum DockMenuContent: String, CaseIterable { case pages, alphabetical, recent }
 enum MultiSelectKey: String, CaseIterable { case off, command, shift }
 enum AppIconStyle: Int, CaseIterable { case mono, blue, grid, rocket }
 
@@ -65,6 +69,7 @@ extension TargetScreen {
         switch self {
         case .dock: String(localized: "程序坞所在屏幕")
         case .mouse: String(localized: "鼠标所在屏幕")
+        case .active: String(localized: "当前窗口所在屏幕")
         case .main: String(localized: "主屏幕")
         }
     }
@@ -74,9 +79,22 @@ extension ReturnHome {
     var title: String {
         switch self {
         case .immediately: String(localized: "立即")
+        case .thirtySeconds: String(localized: "30 秒后")
         case .oneMinute: String(localized: "1 分钟后")
         case .fiveMinutes: String(localized: "5 分钟后")
+        case .fifteenMinutes: String(localized: "15 分钟后")
+        case .oneHour: String(localized: "1 小时后")
         case .never: String(localized: "从不")
+        }
+    }
+}
+
+extension DockMenuContent {
+    var title: String {
+        switch self {
+        case .pages: String(localized: "按页面和文件夹")
+        case .alphabetical: String(localized: "全部 App（按字母）")
+        case .recent: String(localized: "最近使用的 App")
         }
     }
 }
@@ -126,6 +144,7 @@ final class Settings {
     var showMenuBarIcon: Bool { didSet { save(showMenuBarIcon, "showMenuBarIcon") } }
     var menuBarIcon: MenuBarIconStyle { didSet { save(menuBarIcon.rawValue, "menuBarIcon") } }
     var showDockIcon: Bool { didSet { save(showDockIcon, "showDockIcon") } }
+    var dockMenu: DockMenuContent { didSet { save(dockMenu.rawValue, "dockMenu") } }
     var appIcon: AppIconStyle { didSet { save(appIcon.rawValue, "appIcon") } }
     var multiSelectKey: MultiSelectKey { didSet { save(multiSelectKey.rawValue, "multiSelectKey") } }
     /// ✕ badges in jiggle mode.
@@ -196,6 +215,7 @@ final class Settings {
         showMenuBarIcon = value("showMenuBarIcon", true)
         menuBarIcon = MenuBarIconStyle(rawValue: value("menuBarIcon", "")) ?? .grid
         showDockIcon = value("showDockIcon", false)
+        dockMenu = DockMenuContent(rawValue: value("dockMenu", "")) ?? .pages
         appIcon = AppIconStyle(rawValue: value("appIcon", 2)) ?? .grid
         multiSelectKey = MultiSelectKey(rawValue: value("multiSelectKey", "")) ?? .command
         deleteBadges = value("deleteBadges", true)

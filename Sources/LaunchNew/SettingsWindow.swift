@@ -329,8 +329,13 @@ struct GeneralTab: View {
                 }
             }
             Card {
-                Row(title: String(localized: "程序坞图标"), subtitle: String(localized: "在程序坞显示图标，右键可按页面和文件夹打开 App")) {
+                Row(title: String(localized: "程序坞图标"), subtitle: String(localized: "在程序坞显示图标，右键可直接打开 App，不用打开启动台")) {
                     Toggle("", isOn: $settings.showDockIcon).toggleStyle(.switch).labelsHidden()
+                }
+                if settings.showDockIcon {
+                    Row(title: String(localized: "程序坞菜单")) {
+                        MenuPicker(selection: $settings.dockMenu, options: DockMenuContent.allCases, title: \.title)
+                    }
                 }
                 Row(title: String(localized: "应用图标"), info: String(localized: "程序坞和切换器里显示的图标")) {
                     HStack(spacing: 12) {

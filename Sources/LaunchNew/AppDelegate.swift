@@ -234,6 +234,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
         let model = launcher.model
         let byID = Dictionary(model.visibleApps.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        switch settings.dockMenu {
+        case .pages:
+            addPages(to: menu, byID: byID)
+        case .alphabetical:
+            let apps = model.visibleApps.filter { !$0.isCustom }
+                .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+            // Grouped under their first letter (pinyin for Chinese names), so long lists stay usable.
+            let groups = Dictionary(grouping: apps) { Self.indexLetter(for: $0) }
+            for letter in groups.keys.sorted() {
+                let sub = NSMenu()
+                groups[letter]!.forEach { sub.addItem(appItem($0)) }
+                let letterItem = NSMenuItem(title: letter, action: nil, keyEquivalent: "")
+                letterItem.submenu = sub
+                menu.addItem(letterItem)
+            }
+        case .recent:
+            let recent = model.visibleApps.filter { !$0.isCustom && $0.lastUsedDate != nil }
+                .sorted { $0.lastUsedDate! > $1.lastUsedDate! }
+                .prefix(15)
+            recent.forEach { menu.addItem(appItem($0)) }
+        }
+        menu.addItem(.separator())
+        menu.addItem(item(String(localized: "设置…"), #selector(openSettings)))
+        return menu
+    }
+
+    /// "A"…"Z" from the name (or its pinyin), "#" for anything else.
+    static func indexLetter(for app: AppItem) -> String {
+        let first = (Pinyin.keys(for: app.name).first ?? app.name).prefix(1).uppercased()
+        return first.count == 1 && ("A"..."Z").contains(first) ? first : "#"
+    }
+
+    private func addPages(to menu: NSMenu, byID: [String: AppItem]) {
+        let model = launcher.model
         for (index, page) in model.layout.enumerated() {
             let pageMenu = NSMenu()
             for entry in page {
@@ -255,9 +289,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             pageItem.submenu = pageMenu
             menu.addItem(pageItem)
         }
-        menu.addItem(.separator())
-        menu.addItem(item(String(localized: "设置…"), #selector(openSettings)))
-        return menu
     }
 
     private func appItem(_ app: AppItem) -> NSMenuItem {
