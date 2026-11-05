@@ -374,6 +374,11 @@ final class LauncherController {
             return self.handleScroll(event)
         }) { monitors.append(m) }
 
+        if let m = NSEvent.addLocalMonitorForEvents(matching: .otherMouseDown, handler: { [weak self] event in
+            guard let self else { return event }
+            return self.handleSideButton(event)
+        }) { monitors.append(m) }
+
         // Icon drags are tracked here rather than by the SwiftUI gesture, because the view
         // that started the drag may go away (leaving a folder, overflowing onto another page).
         if let m = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDragged, .leftMouseUp], handler: { [weak self] event in
@@ -505,7 +510,13 @@ final class LauncherController {
 
     private func handleScroll(_ event: NSEvent) -> NSEvent? {
         guard isVisible, event.window === panel else { return event }
-        if model.drag != nil { return nil }
+        // Smooth-scrolling mouse drivers send point deltas with no gesture phase at all.
+        let isTrackpad = event.hasPreciseScrollingDeltas && !(event.phase.isEmpty && event.momentumPhase.isEmpty)
+        if model.drag != nil {
+            // The wheel turns pages while an icon is held.
+            if !isTrackpad { wheelFlip(event) }
+            return nil
+        }
         if model.showSettings { return event }
         // The scrolling browse style scrolls natively, unless a folder is open.
         if settings.browseStyle == .scroll, model.openFolderID == nil { return event }
@@ -516,7 +527,7 @@ final class LauncherController {
             return nil
         }
 
-        if event.hasPreciseScrollingDeltas {
+        if isTrackpad {
             // Trackpad: follow the fingers, then snap to a page.
             if !event.momentumPhase.isEmpty { return nil }
             let dx = event.scrollingDeltaX, dy = event.scrollingDeltaY
@@ -535,15 +546,37 @@ final class LauncherController {
                 break
             }
         } else {
-            // Mouse wheel: one flick flips one page. A flick sends a burst of events,
-            // so only the first event after a pause counts.
-            let delta = event.scrollingDeltaY != 0 ? event.scrollingDeltaY : event.scrollingDeltaX
-            guard delta != 0 else { return nil }
-            let now = Date()
-            if now.timeIntervalSince(lastWheelEvent) > 0.3 {
-                model.flipPage(delta < 0 ? 1 : -1)
-            }
-            lastWheelEvent = now
+            wheelFlip(event)
+        }
+        return nil
+    }
+
+    /// Mouse wheel: one flick flips one page. A flick (or a smooth-scrolling mouse's glide)
+    /// sends a burst of events, so only the first event after a pause counts.
+    private func wheelFlip(_ event: NSEvent) {
+        let delta = event.scrollingDeltaY != 0 ? event.scrollingDeltaY : event.scrollingDeltaX
+        guard delta != 0 else { return }
+        let now = Date()
+        if now.timeIntervalSince(lastWheelEvent) > 0.3 {
+            flip(delta < 0 ? 1 : -1)
+        }
+        lastWheelEvent = now
+    }
+
+    private func flip(_ step: Int) {
+        model.flipPage(step)
+        // A held icon lands on the new page under the pointer.
+        if model.drag != nil { model.dragMoved(to: model.dragLocation) }
+    }
+
+    /// The mouse's back and forward side buttons turn pages.
+    private func handleSideButton(_ event: NSEvent) -> NSEvent? {
+        guard isVisible, event.window === panel, !model.showSettings, model.sheet == nil,
+              model.openFolderID == nil, settings.browseStyle == .paged || model.drag != nil else { return event }
+        switch event.buttonNumber {
+        case 3: flip(-1)
+        case 4: flip(1)
+        default: return event
         }
         return nil
     }
