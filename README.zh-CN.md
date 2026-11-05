@@ -62,3 +62,7 @@ cd LaunchNew
 
 LaunchNew 完全免费：没有 Pro 版、没有订阅、没有广告。
 
+
+## 许可证
+
+[MIT](LICENSE)

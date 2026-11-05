@@ -62,3 +62,7 @@ LaunchNew has no accounts, no analytics and no network access other than checkin
 
 LaunchNew is completely free. No Pro tier, no subscriptions, no ads.
 
+
+## License
+
+[MIT](LICENSE)
