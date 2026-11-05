@@ -73,7 +73,16 @@ enum LauncherMenus {
             model.sheet = .editSmartFolder(nil, query: tags.isEmpty ? "" : model.query.trimmingCharacters(in: .whitespaces))
         }
         menu.add(String(localized: "新建启动项…"), symbol: "plus.app") { model.sheet = .editCustom(nil) }
-        menu.add(String(localized: "整理布局…"), symbol: "square.grid.3x3.topleft.filled") { model.openSettings(.advanced) }
+        menu.addSubmenu(String(localized: "整理"), symbol: "square.grid.3x3.topleft.filled") { sub in
+            let hasFolders = model.layout.joined().contains { if case .folder(let f) = $0 { !f.isSmart } else { false } }
+            sub.add(String(localized: "解散所有文件夹"), symbol: "folder.badge.minus", enabled: hasFolders) {
+                model.ungroupAllFolders()
+            }
+            sub.add(String(localized: "文件夹移到最前"), symbol: "arrow.up.to.line") { model.moveAllFolders(toStart: true) }
+            sub.add(String(localized: "文件夹移到最后"), symbol: "arrow.down.to.line") { model.moveAllFolders(toStart: false) }
+            sub.addSeparator()
+            sub.add(String(localized: "整理布局…")) { model.openSettings(.advanced) }
+        }
         menu.addSubmenu(String(localized: "布局方案"), symbol: "rectangle.stack") { sub in
             addProfiles(to: sub, model: model)
         }

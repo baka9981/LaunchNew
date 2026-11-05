@@ -163,7 +163,26 @@ extension LauncherModel {
 
     /// Rebuilds the layout from rules chosen in settings.
     func applyRules(_ rules: LayoutRules) {
-        layout = LayoutOps.arranged(catalog.apps, current: layout, hidden: hiddenIDs, rules: rules, perPage: perPage)
+        var colors: [String: IconColor] = [:]
+        if rules.order == .color {
+            for (id, image) in catalog.icons { colors[id] = IconColor.of(image) }
+        }
+        replaceLayout(LayoutOps.arranged(catalog.apps, current: layout, hidden: hiddenIDs, rules: rules,
+                                         perPage: perPage, colors: colors))
+    }
+
+    /// Takes every app out of its folder, leaving it where the folder was.
+    func ungroupAllFolders() {
+        replaceLayout(LayoutOps.ungrouped(layout, perPage: perPage))
+    }
+
+    /// Gathers all folders at the start or the end of the pages.
+    func moveAllFolders(toStart: Bool) {
+        replaceLayout(LayoutOps.foldersMoved(layout, toStart: toStart, perPage: perPage))
+    }
+
+    private func replaceLayout(_ pages: [[LayoutItem]]) {
+        layout = pages
         LayoutStore.save(layout: layout)
         dropFolder()
         currentPage = 0

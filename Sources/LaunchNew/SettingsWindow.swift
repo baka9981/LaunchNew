@@ -952,10 +952,17 @@ struct RulesSheet: View {
                     Stepper(String(localized: "至少 \(rules.minFolderSize) 个 App 才建文件夹"), value: $rules.minFolderSize, in: 2...10)
                         .padding(.leading, 20)
                 }
-                Toggle(String(localized: "文件夹排在前面"), isOn: $rules.foldersFirst)
+                Picker(String(localized: "文件夹位置"), selection: $rules.folderPlacement) {
+                    Text("最前面").tag(LayoutRules.FolderPlacement.first)
+                    Text("最后面").tag(LayoutRules.FolderPlacement.last)
+                    Text("和 App 混排").tag(LayoutRules.FolderPlacement.mixed)
+                }
+                .pickerStyle(.radioGroup).horizontalRadioGroupLayout()
                 Picker(String(localized: "排序"), selection: $rules.order) {
                     Text("名称").tag(LayoutRules.Order.name)
                     Text("最近安装").tag(LayoutRules.Order.recentlyAdded)
+                    Text("上次打开").tag(LayoutRules.Order.lastOpened)
+                    Text("颜色").tag(LayoutRules.Order.color)
                 }
                 .pickerStyle(.radioGroup).horizontalRadioGroupLayout()
             }
@@ -968,7 +975,7 @@ struct RulesSheet: View {
             }
         }
         .padding(22)
-        .frame(width: 380)
+        .frame(width: 440)
     }
 }
 

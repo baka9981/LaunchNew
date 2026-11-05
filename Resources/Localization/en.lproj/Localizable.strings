@@ -148,7 +148,6 @@
 "整理布局" = "Organize Layout";
 "整理布局…" = "Organize Layout…";
 "整理空位" = "Fill Gaps";
-"文件夹排在前面" = "Folders first";
 "新建智能文件夹" = "New Smart Folder";
 "新建智能文件夹…" = "New Smart Folder…";
 "新建标签…" = "New Tag…";
@@ -454,3 +453,11 @@
 "「日历」的图标显示今天的日期" = "Calendar's icon shows today's date";
 "拖到最左边关闭模糊" = "Drag all the way left to turn blur off";
 "玻璃强度" = "Glass intensity";
+"上次打开" = "Last opened";
+"和 App 混排" = "Mixed with apps";
+"文件夹位置" = "Folders";
+"文件夹移到最前" = "Move Folders to Start";
+"文件夹移到最后" = "Move Folders to End";
+"最前面" = "First";
+"最后面" = "Last";
+"解散所有文件夹" = "Ungroup All Folders";

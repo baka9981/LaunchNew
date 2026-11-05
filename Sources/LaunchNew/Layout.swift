@@ -273,19 +273,69 @@ struct LayoutBackup: Codable {
 
 /// Options for rebuilding the layout from scratch ("整理布局 › 自定义规则").
 struct LayoutRules: Equatable {
-    enum Order: String, CaseIterable { case name, recentlyAdded }
+    enum Order: String, CaseIterable { case name, recentlyAdded, lastOpened, color }
+    /// Where folders go among the apps.
+    enum FolderPlacement: String, CaseIterable { case first, last, mixed }
     var keepFolders = true
     var groupByCategory = true
     /// Smallest category that gets its own folder.
     var minFolderSize = 3
     var systemAppsFolder = true
-    var foldersFirst = true
+    var folderPlacement: FolderPlacement = .first
     var order: Order = .name
+}
+
+/// An icon's main colour, for arranging apps like a colour wheel.
+struct IconColor: Equatable, Sendable {
+    var hue: Double
+    var saturation: Double
+    var brightness: Double
+
+    /// Colourful icons by hue (red to violet), then the grey ones from light to dark.
+    static func before(_ a: IconColor?, _ b: IconColor?) -> Bool? {
+        let grey = 0.18
+        guard let a, let b else { return a == nil && b == nil ? nil : a != nil }
+        let aGrey = a.saturation < grey, bGrey = b.saturation < grey
+        if aGrey != bGrey { return !aGrey }
+        if aGrey {
+            return abs(a.brightness - b.brightness) < 0.02 ? nil : a.brightness > b.brightness
+        }
+        // Twelve bands, so near-identical hues fall back to the name. Shifted half a band,
+        // so the reds just below 1 join the ones just above 0.
+        func band(_ hue: Double) -> Int { Int(((hue + 1.0 / 24).truncatingRemainder(dividingBy: 1)) * 12) }
+        let aBand = band(a.hue), bBand = band(b.hue)
+        return aBand == bBand ? nil : aBand < bBand
+    }
+
+    /// The average of the icon's opaque pixels, weighted toward the more saturated ones.
+    static func of(_ image: CGImage) -> IconColor? {
+        let side = 16
+        var pixels = [UInt8](repeating: 0, count: side * side * 4)
+        guard let space = CGColorSpace(name: CGColorSpace.sRGB),
+              let ctx = CGContext(data: &pixels, width: side, height: side, bitsPerComponent: 8, bytesPerRow: side * 4,
+                                  space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        ctx.interpolationQuality = .medium
+        ctx.draw(image, in: CGRect(x: 0, y: 0, width: side, height: side))
+        var r = 0.0, g = 0.0, b = 0.0, total = 0.0, plain = 0.0, light = 0.0
+        for i in stride(from: 0, to: pixels.count, by: 4) {
+            let alpha = Double(pixels[i + 3]) / 255
+            guard alpha > 0.6 else { continue }
+            let pr = Double(pixels[i]) / 255 / alpha, pg = Double(pixels[i + 1]) / 255 / alpha, pb = Double(pixels[i + 2]) / 255 / alpha
+            let maxC = max(pr, pg, pb), minC = min(pr, pg, pb)
+            let sat = maxC > 0 ? (maxC - minC) / maxC : 0
+            let weight = 0.05 + sat * sat
+            r += pr * weight; g += pg * weight; b += pb * weight; total += weight
+            plain += 1; light += maxC
+        }
+        guard total > 0, plain > 0 else { return nil }
+        let color = NSColor(srgbRed: r / total, green: g / total, blue: b / total, alpha: 1)
+        return IconColor(hue: color.hueComponent, saturation: color.saturationComponent, brightness: light / plain)
+    }
 }
 
 extension LayoutOps {
     static func arranged(_ installed: [AppItem], current: [[LayoutItem]], hidden: Set<String>,
-                         rules: LayoutRules, perPage: Int) -> [[LayoutItem]] {
+                         rules: LayoutRules, perPage: Int, colors: [String: IconColor] = [:]) -> [[LayoutItem]] {
         let apps = installed.filter { !hidden.contains($0.id) }
         let byID = Dictionary(apps.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         var used = Set<String>()
@@ -321,20 +371,54 @@ extension LayoutOps {
             }
         }
 
-        func newest(_ ids: [String]) -> Date { ids.compactMap { byID[$0]?.addedDate }.max() ?? .distantPast }
-        func before(_ a: (String, Date), _ b: (String, Date)) -> Bool {
-            if rules.order == .recentlyAdded, a.1 != b.1 { return a.1 > b.1 }
-            return a.0.localizedStandardCompare(b.0) == .orderedAscending
+        // What each item sorts by; a folder goes by its newest / most recently opened / first app.
+        struct Key { var name: String; var added: Date; var opened: Date; var color: IconColor? }
+        func key(_ name: String, _ ids: [String]) -> Key {
+            let members = ids.compactMap { byID[$0] }
+            return Key(name: name,
+                       added: members.compactMap(\.addedDate).max() ?? .distantPast,
+                       opened: members.compactMap(\.lastUsedDate).max() ?? .distantPast,
+                       color: ids.first.flatMap { colors[$0] })
+        }
+        func before(_ a: Key, _ b: Key) -> Bool {
+            switch rules.order {
+            case .recentlyAdded where a.added != b.added: return a.added > b.added
+            case .lastOpened where a.opened != b.opened: return a.opened > b.opened
+            case .color: if let result = IconColor.before(a.color, b.color) { return result }
+            default: break
+            }
+            return a.name.localizedStandardCompare(b.name) == .orderedAscending
         }
         let folderItems = folders
-            .map { (LayoutItem.folder($0), ($0.name, newest($0.apps))) }
+            .map { (LayoutItem.folder($0), key($0.name, $0.apps)) }
             .sorted { before($0.1, $1.1) }
         let appItems = remaining
-            .map { (LayoutItem.app($0.id), ($0.name, $0.addedDate ?? .distantPast)) }
+            .map { (LayoutItem.app($0.id), key($0.name, [$0.id])) }
             .sorted { before($0.1, $1.1) }
-        let items = rules.foldersFirst
-            ? folderItems.map(\.0) + appItems.map(\.0)
-            : (folderItems + appItems).sorted { before($0.1, $1.1) }.map(\.0)
+        let items: [LayoutItem] = switch rules.folderPlacement {
+        case .first: folderItems.map(\.0) + appItems.map(\.0)
+        case .last: appItems.map(\.0) + folderItems.map(\.0)
+        case .mixed: (folderItems + appItems).sorted { before($0.1, $1.1) }.map(\.0)
+        }
         return repack([items], perPage: perPage)
+    }
+}
+
+extension LayoutOps {
+    /// Every ordinary folder replaced by its apps, where the folder was. Smart folders stay.
+    static func ungrouped(_ pages: [[LayoutItem]], perPage: Int) -> [[LayoutItem]] {
+        let items = pages.joined().flatMap { item -> [LayoutItem] in
+            guard case .folder(let folder) = item, !folder.isSmart else { return [item] }
+            return folder.apps.map { .app($0) }
+        }
+        return repack([items], perPage: perPage)
+    }
+
+    /// All folders gathered at the start or the end, everything else keeping its order.
+    static func foldersMoved(_ pages: [[LayoutItem]], toStart: Bool, perPage: Int) -> [[LayoutItem]] {
+        let items = Array(pages.joined())
+        let folders = items.filter { if case .folder = $0 { true } else { false } }
+        let apps = items.filter { if case .app = $0 { true } else { false } }
+        return repack([toStart ? folders + apps : apps + folders], perPage: perPage)
     }
 }
