@@ -21,6 +21,17 @@ extension AutoBackupTests {
         }
     }
 
+    @Test @MainActor func portraitScreenTurnsTheGridOnItsSide() async throws {
+        try await withFolderFixture { model in
+            let (columns, rows) = (model.settings.columns, model.settings.rows)
+            model.screenSize = CGSize(width: 1080, height: 1920)
+            #expect(model.columns == min(columns, rows) && model.rows == max(columns, rows))
+            #expect(model.perPage == columns * rows, "same apps per page, so nothing changes page")
+            model.screenSize = CGSize(width: 1920, height: 1080)
+            #expect(model.columns == columns && model.rows == rows)
+        }
+    }
+
     @Test @MainActor func folderScrollClampsBothEndsWithOneHundredApps() async throws {
         try await withFolderFixture { model in
             model.scrollFolder(by: 100_000)

@@ -95,10 +95,14 @@ struct BackgroundView: View {
     var body: some View {
         ZStack {
             if !glass, let image = wallpaper.image {
-                Image(decorative: image, scale: 1)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // Sized by the screen, not the picture: a landscape picture on a portrait
+                // screen would otherwise widen the whole launcher and push the grid aside.
+                Color.clear
+                    .overlay {
+                        Image(decorative: image, scale: 1)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    }
                     .clipped()
             } else {
                 // Wallpaper unreadable (e.g. video or rotating folder): blur what's behind instead.

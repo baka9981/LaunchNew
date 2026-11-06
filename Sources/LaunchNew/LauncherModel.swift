@@ -58,8 +58,12 @@ struct DragSession {
 final class LauncherModel {
     let catalog: AppCatalog
     let settings: Settings
-    var columns: Int { settings.columns }
-    var rows: Int { settings.rows }
+    /// On a portrait screen the grid turns on its side (7 × 5 becomes 5 × 7), so a page
+    /// holds the same apps without squeezing seven narrow columns across.
+    var columns: Int { portrait ? min(settings.columns, settings.rows) : settings.columns }
+    var rows: Int { portrait ? max(settings.columns, settings.rows) : settings.rows }
+    /// The launcher is taller than it is wide.
+    private(set) var portrait = false
     var folderColumns: Int { columns }
     var folderRows: Int { rows }
     var perPage: Int { columns * rows }
@@ -187,6 +191,8 @@ final class LauncherModel {
     var mergeTargetID: String?
     @ObservationIgnored var screenSize: CGSize = .zero {
         didSet {
+            let tall = screenSize.height > screenSize.width
+            if tall != portrait { portrait = tall }
             clampFolderScroll()
             revealFolderSelection()
         }
