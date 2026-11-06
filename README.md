@@ -30,12 +30,14 @@ macOS 26 replaced Launchpad with the Apps window. LaunchNew brings back the full
 | | |
 |---|---|
 | 🚀 **Feels like Launchpad** | Full-screen blurred grid, pages, folders, jiggle mode, ⌥Space / F4 / trackpad pinch / hot corner |
-| 🔎 **Smarter search** | Pinyin & initials (`wx` → WeChat), aliases, `#tags`, smart folders |
+| 🔎 **Smarter search** | Pinyin & initials (`wx` → WeChat), aliases, `#tags`, smart folders; math and unit conversion (`128*3`, `5 km in mi`) |
+| 📂 **Drop files on icons** | Drop files on an app icon to open them with that app, just like the Dock |
 | 🧩 **Custom items** | Websites, files, folders and shell scripts that live on the grid like apps |
-| 🎨 **Make it yours** | Change any icon, your own background picture, window or full-screen mode, rows & columns |
+| 🎨 **Make it yours** | Change any icon, your own background picture, icon size, animation speed, Liquid Glass folders, window or full-screen mode, rows & columns; the grid turns on its side on portrait displays |
 | 🗂 **Layouts** | Separate pages for work and play — switch from the menu, a link or Shortcuts |
-| 🔔 **Live status** | Dock badges, running indicators, a recent-apps row |
+| 🔔 **Live status** | Dock badges, running indicators, a recent-apps row — ⌘1–⌘9 opens its apps, right-click to pin |
 | 🧹 **Clean uninstall** | Removes the app and its leftovers in `~/Library`, straight to the Trash |
+| 🕸 **Long-unused apps** | Fade apps not opened in over 3 months, or select them all to move into a folder or hide |
 | 🔒 **Private & safe** | Hide apps behind Touch ID, automatic layout backups, optional iCloud sync |
 | ⚡️ **Shortcuts & links** | Open folders, search, switch layouts via Shortcuts or `launchnew://` |
 | 🔄 **Auto updates** | Signed updates through Sparkle |
