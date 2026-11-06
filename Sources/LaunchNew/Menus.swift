@@ -50,8 +50,13 @@ extension NSMenu {
     func addAlternate(_ title: String, symbol: String? = nil, key: String = "", _ handler: @escaping () -> Void) -> NSMenuItem {
         let base = items.last
         let item = ActionMenuItem(title, symbol: symbol, key: key, handler: handler)
-        item.keyEquivalentModifierMask = (base?.keyEquivalentModifierMask ?? .command).union(.option)
-        if base?.keyEquivalent.isEmpty ?? true { item.keyEquivalentModifierMask = .option }
+        if let base, !base.keyEquivalent.isEmpty {
+            item.keyEquivalentModifierMask = base.keyEquivalentModifierMask.union(.option)
+        } else {
+            // With no shortcut, the pair only differs by ⌥; NSMenuItem defaults the mask to ⌘.
+            base?.keyEquivalentModifierMask = []
+            item.keyEquivalentModifierMask = .option
+        }
         item.isAlternate = true
         addItem(item)
         return item
