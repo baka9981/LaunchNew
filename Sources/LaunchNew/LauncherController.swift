@@ -200,7 +200,7 @@ final class LauncherController {
             }
         }
         // After the open animation, so the card doesn't pop in over a half-drawn grid.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + settings.animationSpeed.duration(0.35)) { [weak self] in
             guard let self, self.isVisible else { return }
             self.model.presentPendingIntro()
         }
@@ -325,7 +325,7 @@ final class LauncherController {
             model.isPresented = false
             model.gestureProgress = nil
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.17) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + settings.animationSpeed.duration(0.17)) {
             guard self.hideToken == token else { return }
             self.panel.orderOut(nil)
             self.model.didHide()

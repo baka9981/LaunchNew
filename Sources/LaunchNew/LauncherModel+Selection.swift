@@ -48,9 +48,21 @@ extension LauncherModel {
         }
     }
 
+    /// The search field read as a sum or unit conversion, if it is one.
+    var calculation: Calculator.Result? { isSearching ? Calculator.evaluate(query) : nil }
+
+    func copyCalculation() {
+        guard let result = calculation else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(result.copyText, forType: .string)
+        showNotice(String(localized: "已复制 \(result.copyText)"))
+    }
+
     func activateSelection() {
         if let pos = selection, isValid(pos) {
             activate(selectablePages[pos.page][pos.slot])
+        } else if calculation != nil {
+            copyCalculation()
         } else if isSearching, case .app(let app)? = pages.first?.first {
             launch(app)
         }
@@ -135,6 +147,35 @@ extension LauncherModel {
         }
     }
 
+    /// Apps not opened for this long are faded and can be picked out in one go.
+    static let staleAge: TimeInterval = 90 * 24 * 3600
+
+    /// Opened before, but not in the last three months. Never-opened apps aren't flagged:
+    /// Spotlight has no date for many built-in apps either, so that would mark them wrongly.
+    static func isStale(_ app: AppItem, recent: [String], now: Date = Date()) -> Bool {
+        guard !app.isCustom, let used = app.lastUsedDate else { return false }
+        return now.timeIntervalSince(used) > staleAge && !recent.contains(app.id)
+    }
+
+    func isStale(_ entry: GridEntry) -> Bool {
+        guard settings.fadeStale, case .app(let app) = entry else { return false }
+        return Self.isStale(app, recent: recentIDs)
+    }
+
+    var staleApps: [AppItem] { visibleApps.filter { Self.isStale($0, recent: recentIDs) } }
+
+    /// Picks every long-unused app on the home grid, ready to move into a folder or hide.
+    func selectStaleApps() {
+        let ids = Set(staleApps.map(\.id))
+        guard !ids.isEmpty else {
+            showNotice(String(localized: "没有超过 3 个月没打开的 App"))
+            return
+        }
+        closeSettings()
+        multiSelection = ids
+        showNotice(String(localized: "已选中 \(ids.count) 个超过 3 个月没打开的 App，右键可以移动或隐藏"), for: 4)
+    }
+
     func isRunning(_ entry: GridEntry) -> Bool {
         guard settings.showRunningDot, case .app(let app) = entry else { return false }
         return runningIDs.contains(app.id)
@@ -149,14 +190,31 @@ extension LauncherModel {
     }
 
     /// 1…9 for the first nine items of the page on screen, while ⌘ is held.
+    /// With the recent apps row showing, ⌘1…⌘9 open its apps instead of the page's first nine.
+    var shortcutsUseRecentRow: Bool {
+        settings.showFrequent && !frequentApps.isEmpty && !isSearching && openFolderID == nil
+    }
+
+    func frequentShortcutNumber(of app: AppItem) -> Int? {
+        guard showShortcutNumbers, shortcutsUseRecentRow,
+              let index = frequentApps.firstIndex(where: { $0.id == app.id }), index < 9 else { return nil }
+        return index + 1
+    }
+
     func shortcutNumber(of entry: GridEntry) -> Int? {
-        guard showShortcutNumbers, openFolderID == nil, pages.indices.contains(currentPage),
+        guard showShortcutNumbers, !shortcutsUseRecentRow, openFolderID == nil, pages.indices.contains(currentPage),
               let index = pages[currentPage].firstIndex(where: { $0.id == entry.id }), index < 9 else { return nil }
         return index + 1
     }
 
     /// ⌘1…⌘9.
     func openShortcut(_ number: Int) {
+        if shortcutsUseRecentRow {
+            guard number >= 1, number <= frequentApps.count else { return }
+            showShortcutNumbers = false
+            launch(frequentApps[number - 1])
+            return
+        }
         guard openFolderID == nil, pages.indices.contains(currentPage), number >= 1,
               number <= pages[currentPage].count else { return }
         showShortcutNumbers = false

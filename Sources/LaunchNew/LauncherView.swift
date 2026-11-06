@@ -46,9 +46,12 @@ struct GridMetrics: Equatable {
     var gridHeight: CGFloat { cellSize.height * CGFloat(rows) }
     /// Frame of the icon image. macOS icons leave ~10% transparent margin on each side,
     /// so the visible artwork is 80% of this, i.e. 6% of the screen width.
+    /// Larger settings may grow into the cell's spare room, but never past it or into the label.
     var iconSize: CGFloat {
-        windowed ? min(80, cellSize.width * 0.6, cellSize.height * 0.66).rounded()
-            : min(size.width * 0.075, cellSize.width * 0.62, cellSize.height * 0.72).rounded()
+        let s = iconScale
+        return windowed
+            ? min(80 * s, cellSize.width * min(0.6 * s, 0.85), cellSize.height * min(0.66 * s, hideNames ? 0.9 : 0.8)).rounded()
+            : min(size.width * 0.075 * s, cellSize.width * min(0.62 * s, 0.9), cellSize.height * min(0.72 * s, hideNames ? 0.95 : 0.84)).rounded()
     }
     var labelSize: CGFloat { windowed ? 12 : 13 }
     /// Space between the icon frame and the label (the icon's own margin adds ~10% more).
@@ -69,6 +72,8 @@ struct GridMetrics: Equatable {
     // name floating above the panel.
     var folderItemCount = 0
     var hideNames = false
+    /// The icon size setting, 1 being the default.
+    var iconScale: CGFloat = 1
     var folderVisibleRows: Int { min(folderRows, max(1, (folderItemCount + folderColumns - 1) / folderColumns)) }
     /// Panel top to the first row's icon centre.
     var folderIconInset: CGFloat { windowed ? (cellSize.height / 2 - 12).rounded() : (size.height * 0.0735).rounded() }
@@ -109,7 +114,8 @@ struct LauncherView: View {
             let metrics = GridMetrics(size: geo.size, columns: model.columns, rows: model.rows,
                                       windowed: windowed, paged: settings.browseStyle == .paged,
                                       frequentRow: settings.showFrequent,
-                                      folderItemCount: folder?.1.count ?? 0, hideNames: settings.hideNames && settings.hideFolderNames)
+                                      folderItemCount: folder?.1.count ?? 0, hideNames: settings.hideNames && settings.hideFolderNames,
+                                      iconScale: settings.iconScale)
             ZStack(alignment: .top) {
                 Group {
                     if windowed {
@@ -186,6 +192,13 @@ struct LauncherView: View {
                         .position(x: rect.midX, y: rect.midY)
                         .allowsHitTesting(false)
                         .zIndex(4)
+                }
+
+                if let result = model.calculation {
+                    CalculationCard(result: result, windowed: windowed) { model.copyCalculation() }
+                        .position(x: geo.size.width / 2, y: metrics.gridTop + metrics.cellSize.height * 0.6)
+                        .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                        .zIndex(3)
                 }
 
                 if model.dragOutHint {
@@ -280,6 +293,7 @@ struct LauncherView: View {
         }
         .ignoresSafeArea()
         .onChange(of: model.focusRequest) { _, _ in searchFocused = true }
+        .transaction { model.settings.animationSpeed.adjust(&$0) }
     }
 
     static let space = "launcher"
@@ -396,6 +410,18 @@ struct FrequentRow: View {
                                 .offset(x: -metrics.frequentIconSize * 0.08, y: metrics.frequentIconSize * 0.08)
                         }
                     }
+                    .overlay(alignment: .bottom) {
+                        if let number = model.frequentShortcutNumber(of: app) {
+                            Text(verbatim: "⌘\(number)")
+                                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 5).padding(.vertical, 1)
+                                .background(Capsule().fill(.black.opacity(0.6)))
+                                .overlay(Capsule().strokeBorder(.white.opacity(0.3), lineWidth: 0.5))
+                                .offset(y: 6)
+                                .transition(.scale(scale: 0.6).combined(with: .opacity))
+                        }
+                    }
                     .contentShape(RoundedRectangle(cornerRadius: metrics.frequentIconSize * 0.18, style: .continuous)
                         .inset(by: metrics.frequentIconSize * 0.1))
                     .scaleEffect(model.dropTargetID == "frequent:" + app.id ? 1.15 : 1)
@@ -472,6 +498,7 @@ struct EntryView: View {
             EntryIcon(entry: entry, icons: model.catalog.icons, size: metrics.iconSize,
                       mergeTarget: model.mergeTargetID == entry.id,
                       contentsOut: folderOpen)
+                .opacity(model.isStale(entry) && !model.isEditing ? 0.4 : 1)
                 // Icons carry ~10% transparent margin; only the visible tile is clickable.
                 .contentShape(RoundedRectangle(cornerRadius: metrics.iconSize * 0.18, style: .continuous)
                     .inset(by: metrics.iconSize * 0.1))
@@ -585,6 +612,7 @@ struct EntryView: View {
         if case .folder(_, let apps) = entry { parts.append(String(localized: "文件夹，\(apps.count) 个 App")) }
         if isNew { parts.append(String(localized: "新安装")) }
         if running { parts.append(String(localized: "正在运行")) }
+        if model.isStale(entry) { parts.append(String(localized: "很久没有打开")) }
         return parts.joined(separator: String(localized: "，"))
     }
 
@@ -696,17 +724,36 @@ struct EntryIcon: View {
 struct FolderBackground: View {
     let size: CGFloat
     var tint: FolderColor?
+    @Environment(\.windowedStyle) private var windowed
 
     var body: some View {
-        // Smoked glass with a thin rim that catches light at the top.
         let shape = RoundedRectangle(cornerRadius: size * 0.225, style: .continuous)
-        shape
-            .fill(tint.map { AnyShapeStyle($0.color.opacity(0.45)) } ?? AnyShapeStyle(.black.opacity(0.07)))
-            .overlay(shape.strokeBorder(
-                LinearGradient(colors: [.white.opacity(0.42), .white.opacity(0.14), .white.opacity(0.26)],
-                               startPoint: .top, endPoint: .bottom),
-                lineWidth: 1))
-            .frame(width: size, height: size)
+        Group {
+            if Settings.shared.liquidGlass {
+                // Liquid glass: bends and brightens whatever is behind the tile.
+                shape
+                    .fill(tint.map { AnyShapeStyle($0.color.opacity(0.18)) } ?? AnyShapeStyle(.clear))
+                    .glassEffect(LiquidGlass.style(tint: tint?.color, windowed: windowed), in: shape)
+            } else {
+                // Smoked glass with a thin rim that catches light at the top.
+                shape
+                    .fill(tint.map { AnyShapeStyle($0.color.opacity(0.45)) } ?? AnyShapeStyle(.black.opacity(0.07)))
+                    .overlay(shape.strokeBorder(
+                        LinearGradient(colors: [.white.opacity(0.42), .white.opacity(0.14), .white.opacity(0.26)],
+                                       startPoint: .top, endPoint: .bottom),
+                        lineWidth: 1))
+            }
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+enum LiquidGlass {
+    /// Clear glass over the wallpaper, like the system's folder tiles; frosted in window mode,
+    /// where a clear tile would vanish against the light panel.
+    static func style(tint: Color?, windowed: Bool) -> Glass {
+        let base: Glass = windowed ? .regular : .clear
+        return tint.map { base.tint($0.opacity(0.35)) } ?? base
     }
 }
 
@@ -745,6 +792,11 @@ struct FolderPanel: View {
                         .fill(.thickMaterial)
                         .overlay(glass.strokeBorder(.white.opacity(0.5), lineWidth: 1))
                         .shadow(color: .black.opacity(expanded ? 0.18 : 0), radius: 24, y: 10)
+                } else if model.settings.liquidGlass {
+                    glass
+                        .fill(.black.opacity(expanded ? 0.06 : 0))
+                        .glassEffect(LiquidGlass.style(tint: folder.color.flatMap(FolderColor.init(rawValue:))?.color, windowed: false),
+                                     in: glass)
                 } else {
                     glass
                         .fill(.black.opacity(expanded ? 0.1 : 0.07))
@@ -1003,6 +1055,39 @@ private struct LightStrip: View {
 }
 
 /// A capsule message that fades in above the page dots.
+/// The answer to a sum or unit conversion typed into search. Click or Return copies it.
+private struct CalculationCard: View {
+    let result: Calculator.Result
+    let windowed: Bool
+    let copy: () -> Void
+
+    var body: some View {
+        Button(action: copy) {
+            VStack(spacing: 6) {
+                Text(verbatim: result.expression)
+                    .font(.system(size: 15))
+                    .foregroundStyle(windowed ? AnyShapeStyle(.secondary) : AnyShapeStyle(.white.opacity(0.7)))
+                Text(verbatim: result.display)
+                    .font(.system(size: 38, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(windowed ? AnyShapeStyle(.primary) : AnyShapeStyle(.white))
+                    .lineLimit(1).minimumScaleFactor(0.4)
+                Text("按 ↩ 或点按复制结果")
+                    .font(.system(size: 12))
+                    .foregroundStyle(windowed ? AnyShapeStyle(.tertiary) : AnyShapeStyle(.white.opacity(0.55)))
+            }
+            .padding(.horizontal, 28).padding(.vertical, 18)
+            .frame(maxWidth: 520)
+            .background(windowed ? AnyShapeStyle(.regularMaterial) : AnyShapeStyle(.black.opacity(0.35)),
+                        in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(.white.opacity(windowed ? 0 : 0.18), lineWidth: 0.5))
+            .shadow(color: .black.opacity(0.2), radius: 12, y: 4)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(verbatim: "\(result.expression) \(result.display)"))
+    }
+}
+
 private struct NoticeToast: View {
     let text: String
     let windowed: Bool

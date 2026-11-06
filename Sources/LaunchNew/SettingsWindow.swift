@@ -431,6 +431,12 @@ struct AppearanceTab: View {
                     Toggle("", isOn: $settings.hideDock).toggleStyle(.switch).labelsHidden()
                         .disabled(settings.displayMode == .window)
                 }
+                Row(title: String(localized: "动画速度")) {
+                    Picker("", selection: $settings.animationSpeed) {
+                        ForEach(AnimationSpeed.allCases, id: \.self) { Text($0.title).tag($0) }
+                    }
+                    .pickerStyle(.segmented).labelsHidden().fixedSize()
+                }
             }
         }
         SettingsSection(title: String(localized: "布局")) {
@@ -468,6 +474,18 @@ struct AppearanceTab: View {
         }
         SettingsSection(title: String(localized: "图标")) {
             Card {
+                Row(title: String(localized: "图标大小"), subtitle: settings.iconScale == 1 ? nil : "\(Int((settings.iconScale * 100).rounded()))%") {
+                    HStack(spacing: 8) {
+                        Image(systemName: "app").font(.system(size: 10)).foregroundStyle(.secondary)
+                        Slider(value: $settings.iconScale, in: 0.6...1.3, step: 0.05).frame(width: 180)
+                        Image(systemName: "app").font(.system(size: 16)).foregroundStyle(.secondary)
+                        Button(String(localized: "还原")) { settings.iconScale = 1 }
+                            .disabled(settings.iconScale == 1)
+                    }
+                }
+                Row(title: String(localized: "液态玻璃文件夹"), subtitle: String(localized: "文件夹和打开的文件夹透出并折射后面的内容；关掉则用烟灰玻璃")) {
+                    Toggle("", isOn: $settings.liquidGlass).toggleStyle(.switch).labelsHidden()
+                }
                 Row(title: String(localized: "隐藏 App 名称")) {
                     Toggle("", isOn: $settings.hideNames).toggleStyle(.switch).labelsHidden()
                 }
@@ -490,6 +508,9 @@ struct AppearanceTab: View {
                 }
                 Row(title: String(localized: "常用一行"), subtitle: String(localized: "在搜索栏下方显示最近打开的 App")) {
                     Toggle("", isOn: $settings.showFrequent).toggleStyle(.switch).labelsHidden()
+                }
+                Row(title: String(localized: "淡化久未打开的 App"), subtitle: String(localized: "超过 3 个月没打开的 App 图标变淡")) {
+                    Toggle("", isOn: $settings.fadeStale).toggleStyle(.switch).labelsHidden()
                 }
             }
         }
@@ -809,6 +830,9 @@ struct AdvancedTab: View {
                     Stepper(settings.autoBackupCount > 0 ? String(localized: "\(settings.autoBackupCount) 份") : String(localized: "关"),
                             value: $settings.autoBackupCount, in: 0...50)
                         .monospacedDigit()
+                }
+                Row(title: String(localized: "久未打开的 App"), subtitle: String(localized: "选中超过 3 个月没打开的 App，再统一移进文件夹或隐藏")) {
+                    Button(String(localized: "全部选中")) { model.selectStaleApps() }
                 }
                 Row(title: String(localized: "恢复自动备份"), subtitle: String(localized: "回到之前某次更改前的布局")) {
                     HStack {

@@ -1,3 +1,4 @@
+import SwiftUI
 import AppKit
 import Carbon.HIToolbox
 import Observation
@@ -5,6 +6,38 @@ import Observation
 enum DisplayMode: String, CaseIterable { case fullScreen, window }
 enum SortOrder: String, CaseIterable { case custom, name, recentlyAdded, recentlyUsed, mostUsed }
 enum BrowseStyle: String, CaseIterable { case paged, scroll }
+/// How fast the launcher's animations run.
+enum AnimationSpeed: String, CaseIterable {
+    case standard, fast, off
+
+    var title: String {
+        switch self {
+        case .standard: String(localized: "标准")
+        case .fast: String(localized: "快速")
+        case .off: String(localized: "关闭动画")
+        }
+    }
+
+    /// Scales a duration written for the standard speed.
+    func duration(_ seconds: Double) -> Double {
+        switch self {
+        case .standard: seconds
+        case .fast: seconds / 1.8
+        case .off: 0
+        }
+    }
+
+    /// Applied to every transaction in the launcher, so each `withAnimation` follows the setting.
+    func adjust(_ transaction: inout Transaction) {
+        switch self {
+        case .standard: break
+        case .fast: transaction.animation = transaction.animation?.speed(1.8)
+        case .off:
+            transaction.animation = nil
+            transaction.disablesAnimations = true
+        }
+    }
+}
 enum BackgroundKind: String, CaseIterable { case wallpaper, glass, image }
 enum HotCorner: String, CaseIterable { case off, topLeft, topRight, bottomLeft, bottomRight }
 enum TargetScreen: String, CaseIterable { case dock, mouse, active, main }
@@ -164,6 +197,13 @@ final class Settings {
     var hideFolderNames: Bool { didSet { save(hideFolderNames, "hideFolderNames") } }
     /// Calendar's icon shows today's date.
     var dynamicCalendar: Bool { didSet { save(dynamicCalendar, "dynamicCalendar") } }
+    /// Icon size relative to the default, 0.6…1.3.
+    var iconScale: Double { didSet { save(iconScale, "iconScale") } }
+    /// Fades apps not opened for three months.
+    var fadeStale: Bool { didSet { save(fadeStale, "fadeStale") } }
+    /// Folder tiles and the open folder use liquid glass instead of the smoked glass look.
+    var liquidGlass: Bool { didSet { save(liquidGlass, "liquidGlass") } }
+    var animationSpeed: AnimationSpeed { didSet { save(animationSpeed.rawValue, "animationSpeed") } }
     /// A blue dot before the names of newly installed apps, until they're first opened.
     var showNewDot: Bool { didSet { save(showNewDot, "showNewDot") } }
     /// A small dot under apps that are running.
@@ -237,6 +277,10 @@ final class Settings {
         hideNames = value("hideNames", false)
         hideFolderNames = value("hideFolderNames", value("hideNames", false))
         dynamicCalendar = value("dynamicCalendar", true)
+        iconScale = min(1.3, max(0.6, value("iconScale", 1.0)))
+        fadeStale = value("fadeStale", false)
+        liquidGlass = value("liquidGlass", true)
+        animationSpeed = AnimationSpeed(rawValue: value("animationSpeed", "")) ?? .standard
         showNewDot = value("showNewDot", true)
         showRunningDot = value("showRunningDot", true)
         showBadges = value("showBadges", true)
