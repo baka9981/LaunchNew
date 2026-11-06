@@ -7,7 +7,7 @@ import SwiftUI
 /// The "新功能" card, shown once the next time the launcher opens after an upgrade.
 enum WhatsNew {
     /// Bump when `features` changes; bug-fix releases keep it, so the card doesn't come back.
-    static let edition = 1
+    static let edition = 2
     private static let key = "whatsNewSeen"
 
     struct Feature: Identifiable {
@@ -21,32 +21,28 @@ enum WhatsNew {
 
     @MainActor static var features: [Feature] {
         [
-            Feature(symbol: "plus.app", title: String(localized: "自定义启动项"),
-                    detail: String(localized: "网址、文件或脚本，像 App 一样摆放"),
-                    action: { $0.finishWhatsNew(); $0.sheet = .editCustom(nil) }),
-            Feature(symbol: "paintbrush", title: String(localized: "更换图标"),
-                    detail: String(localized: "右键 App › 更换图标…")),
-            Feature(symbol: "rectangle.stack", title: String(localized: "布局方案"),
-                    detail: String(localized: "工作、娱乐各一套页面"),
-                    action: { $0.finishWhatsNew(); $0.openSettings(.advanced) }),
-            Feature(symbol: "arrow.down.to.line", title: String(localized: "拖出图标"),
-                    detail: String(localized: "编辑时拖到底边，放进程序坞或访达")),
-            Feature(symbol: "app.badge", title: String(localized: "通知角标"),
-                    detail: String(localized: "显示程序坞上的未读数"),
+            Feature(symbol: "arrow.down.doc", title: String(localized: "拖文件到图标上"),
+                    detail: String(localized: "用这个 App 打开，和程序坞一样")),
+            Feature(symbol: "plus.forwardslash.minus", title: String(localized: "计算与换算"),
+                    detail: String(localized: "在搜索栏输入 128*3 或 5 km in mi")),
+            Feature(symbol: "command", title: String(localized: "⌘1–9 打开常用 App"),
+                    detail: String(localized: "常用一行的前 9 个，右键可以固定"),
                     action: { $0.finishWhatsNew(); $0.openSettings(.appearance) }),
-            Feature(symbol: "clock.arrow.circlepath", title: String(localized: "常用一行"),
-                    detail: String(localized: "搜索栏下方是最近打开的 App"),
+            Feature(symbol: "arrow.up.left.and.arrow.down.right", title: String(localized: "图标大小"),
+                    detail: String(localized: "设置 › 界面 › 图标"),
                     action: { $0.finishWhatsNew(); $0.openSettings(.appearance) }),
-            Feature(symbol: "photo", title: String(localized: "背景图片"),
-                    detail: String(localized: "用自己的图片作背景"),
+            Feature(symbol: "drop", title: String(localized: "液态玻璃文件夹"),
+                    detail: String(localized: "文件夹透出后面的内容"),
                     action: { $0.finishWhatsNew(); $0.openSettings(.appearance) }),
-            Feature(symbol: "square.2.layers.3d", title: String(localized: "快捷指令"),
-                    detail: String(localized: "打开文件夹、搜索、切换布局"),
-                    action: { model in
-                        model.finishWhatsNew()
-                        model.close()
-                        if let url = URL(string: "shortcuts://") { NSWorkspace.shared.open(url) }
-                    }),
+            Feature(symbol: "hare", title: String(localized: "动画速度"),
+                    detail: String(localized: "标准、快速或关闭"),
+                    action: { $0.finishWhatsNew(); $0.openSettings(.appearance) }),
+            Feature(symbol: "moon.zzz", title: String(localized: "久未打开的 App"),
+                    detail: String(localized: "淡化或一次选中，统一整理"),
+                    action: { $0.finishWhatsNew(); $0.openSettings(.appearance) }),
+            Feature(symbol: "hand.pinch", title: String(localized: "4 指或 5 指捏合"),
+                    detail: String(localized: "两种手势都能打开"),
+                    action: { $0.finishWhatsNew(); $0.openSettings(.general) }),
         ]
     }
 

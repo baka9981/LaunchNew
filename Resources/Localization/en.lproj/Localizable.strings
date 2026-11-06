@@ -199,7 +199,6 @@
 "生活" = "Lifestyle";
 "用键盘上的启动台键（F4）打开 LaunchNew" = "Open LaunchNew with the Launchpad key (F4) on the keyboard";
 "界面" = "Interface";
-"直接打字即可搜索，支持拼音和首字母，比如输入「wx」找到微信。输入 # 按标签筛选。" = "Just start typing to search. Pinyin and initials work too, so “wx” finds WeChat. Type # to filter by tag.";
 "社交" = "Social";
 "移出文件夹" = "Remove from Folder";
 "移到废纸篓" = "Move to Trash";
@@ -485,3 +484,16 @@
 "超过 3 个月没打开的 App 图标变淡" = "Icons of apps not opened in over 3 months fade";
 "还原" = "Reset";
 "选中超过 3 个月没打开的 App，再统一移进文件夹或隐藏" = "Select apps not opened in over 3 months, then move them into a folder or hide them together";
+"直接打字即可搜索，支持拼音和首字母，比如输入「wx」找到微信。输入 # 按标签筛选，输入 128*3 或 5 km in mi 直接算出结果。" = "Just start typing to search. Pinyin and initials work too, so “wx” finds WeChat. Type # to filter by tag, or 128*3 or 5 km in mi to get the answer.";
+"拖文件到图标上" = "Drop Files on Icons";
+"用这个 App 打开，和程序坞一样" = "Opens them in that app, just like the Dock";
+"计算与换算" = "Math & Conversions";
+"在搜索栏输入 128*3 或 5 km in mi" = "Type 128*3 or 5 km in mi in the search field";
+"⌘1–9 打开常用 App" = "⌘1–9 for Recent Apps";
+"常用一行的前 9 个，右键可以固定" = "The first 9 in the recent apps row. Right-click to pin.";
+"设置 › 界面 › 图标" = "Settings › Interface › Icons";
+"文件夹透出后面的内容" = "Folders show what’s behind them";
+"标准、快速或关闭" = "Standard, fast or off";
+"淡化或一次选中，统一整理" = "Fade them, or select them all to tidy up";
+"4 指或 5 指捏合" = "Pinch with 4 or 5 Fingers";
+"两种手势都能打开" = "Either one opens the launcher";
