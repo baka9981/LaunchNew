@@ -51,6 +51,7 @@ final class LauncherController {
         self.catalog = catalog
         model = LauncherModel(catalog: catalog)
         model.onLaunch = { [weak self] app in self?.launch(app) }
+        model.onOpenFiles = { [weak self] urls, app in self?.open(urls, with: app) }
         model.onClose = { [weak self] in self?.hide(restoreFocus: true) }
         PermissionHelper.shared.hideLauncher = { [weak self] in
             if self?.isVisible == true { self?.hide(restoreFocus: true) }
@@ -347,6 +348,15 @@ final class LauncherController {
         config.activates = true
         NSWorkspace.shared.openApplication(at: app.url, configuration: config) { _, error in
             if let error { NSLog("LaunchNew: failed to open \(app.url.path): \(error)") }
+        }
+        hide(restoreFocus: false)
+    }
+
+    private func open(_ urls: [URL], with app: AppItem) {
+        let config = NSWorkspace.OpenConfiguration()
+        config.activates = true
+        NSWorkspace.shared.open(urls, withApplicationAt: app.url, configuration: config) { _, error in
+            if let error { NSLog("LaunchNew: failed to open files with \(app.url.path): \(error)") }
         }
         hide(restoreFocus: false)
     }

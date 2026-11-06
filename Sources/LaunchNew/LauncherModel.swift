@@ -203,6 +203,10 @@ final class LauncherModel {
     /// Items of the search field's "⋯" menu, supplied by the controller.
     @ObservationIgnored var menuItems: [(title: String, action: () -> Void)] = []
     @ObservationIgnored var onLaunch: ((AppItem) -> Void)?
+    /// Opens files dropped on an app icon with that app.
+    @ObservationIgnored var onOpenFiles: (([URL], AppItem) -> Void)?
+    /// The app icon a file drag is hovering over, highlighted until the drop.
+    var dropTargetID: String?
     @ObservationIgnored var onClose: (() -> Void)?
     /// The settings card over the launcher.
     var showSettings = false

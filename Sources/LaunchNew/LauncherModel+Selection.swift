@@ -107,6 +107,18 @@ extension LauncherModel {
         onLaunch?(app)
     }
 
+    /// Files dropped on an app icon open in that app, which counts as launching it.
+    @discardableResult
+    func open(_ urls: [URL], with app: AppItem) -> Bool {
+        let files = urls.filter(\.isFileURL)
+        guard !files.isEmpty, !app.isCustom, !isEditing else { return false }
+        RecentLaunches.record(app.id)
+        recentIDs = RecentLaunches.load()
+        updateFrequentApps()
+        onOpenFiles?(files, app)
+        return true
+    }
+
     func updateNewApps() {
         let state = NewApps.update(newApps ?? NewApps.load(), apps: catalog.apps)
         if state != newApps { NewApps.save(state) }

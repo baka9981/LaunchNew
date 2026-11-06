@@ -398,6 +398,8 @@ struct FrequentRow: View {
                     }
                     .contentShape(RoundedRectangle(cornerRadius: metrics.frequentIconSize * 0.18, style: .continuous)
                         .inset(by: metrics.frequentIconSize * 0.1))
+                    .scaleEffect(model.dropTargetID == "frequent:" + app.id ? 1.15 : 1)
+                    .animation(.spring(response: 0.25, dampingFraction: 0.7), value: model.dropTargetID == "frequent:" + app.id)
                     .help(app.name)
                     .onTapGesture { model.launch(app) }
                     .accessibilityElement(children: .ignore)
@@ -405,6 +407,7 @@ struct FrequentRow: View {
                     .accessibilityAddTraits(.isButton)
                     .accessibilityAction { model.launch(app) }
                     .nativeContextMenu { LauncherMenus.frequent(app, model: model) }
+                    .modifier(FileDrop(entry: .app(app), model: model, targetID: "frequent:" + app.id))
             }
         }
         .padding(.horizontal, 14)
@@ -415,6 +418,28 @@ struct FrequentRow: View {
                     .overlay(Capsule().strokeBorder(metrics.windowed ? Color.primary.opacity(0.06) : .white.opacity(0.14), lineWidth: 0.75))
                     .nativeContextMenu { LauncherMenus.frequent(nil, model: model) }
             }
+        }
+    }
+}
+
+/// Files dragged from Finder onto an app icon open in that app.
+private struct FileDrop: ViewModifier {
+    let entry: GridEntry
+    let model: LauncherModel
+    /// Tells apart the same app in the grid and in the frequent row.
+    var targetID: String?
+
+    func body(content: Content) -> some View {
+        let id = targetID ?? entry.id
+        if case .app(let app) = entry, !app.isCustom {
+            content.dropDestination(for: URL.self) { urls, _ in
+                model.dropTargetID = nil
+                return model.open(urls, with: app)
+            } isTargeted: { targeted in
+                if targeted { model.dropTargetID = id } else if model.dropTargetID == id { model.dropTargetID = nil }
+            }
+        } else {
+            content
         }
     }
 }
@@ -525,15 +550,18 @@ struct EntryView: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .background {
-            if selected || picked {
+            if selected || picked || dropTarget {
                 RoundedRectangle(cornerRadius: metrics.iconSize * 0.2, style: .continuous)
-                    .fill(metrics.windowed ? Color.primary.opacity(picked ? 0.14 : 0.09) : .white.opacity(picked ? 0.24 : 0.18))
+                    .fill(metrics.windowed ? Color.primary.opacity(picked || dropTarget ? 0.14 : 0.09) : .white.opacity(picked || dropTarget ? 0.24 : 0.18))
             }
         }
+        .scaleEffect(dropTarget ? 1.08 : 1)
+        .animation(.spring(response: 0.25, dampingFraction: 0.7), value: dropTarget)
         .brightness(pressing ? -0.3 : 0)
         .modifier(Wiggle(active: model.isEditing && !isDragged, seed: entry.id.utf8.reduce(0) { $0 &+ Int($1) }))
         .opacity(isDragged ? 0 : 1)
         .gesture(pressGesture)
+        .modifier(FileDrop(entry: entry, model: model))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel(isNew: isNew, running: running))
         .accessibilityAddTraits(.isButton)
@@ -544,6 +572,8 @@ struct EntryView: View {
                 : LauncherMenus.entry(entry, model: model, folderID: folderID)
         }
     }
+
+    private var dropTarget: Bool { model.dropTargetID != nil && model.dropTargetID == entry.id }
 
     /// App and folder names can be hidden separately; the space stays while either shows.
     private var nameHidden: Bool {
