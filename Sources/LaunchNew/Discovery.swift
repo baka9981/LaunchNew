@@ -29,7 +29,7 @@ enum WhatsNew {
                     detail: String(localized: "常用一行的前 9 个，右键可以固定"),
                     action: { $0.finishWhatsNew(); $0.openSettings(.appearance) }),
             Feature(symbol: "arrow.up.left.and.arrow.down.right", title: String(localized: "图标大小"),
-                    detail: String(localized: "设置 › 界面 › 图标"),
+                    detail: String(localized: "设置 › 外观 › 网格"),
                     action: { $0.finishWhatsNew(); $0.openSettings(.appearance) }),
             Feature(symbol: "drop", title: String(localized: "液态玻璃文件夹"),
                     detail: String(localized: "文件夹透出后面的内容"),
@@ -146,7 +146,7 @@ struct WhatsNewView: View {
                 .foregroundStyle(Color.accentColor)
                 .padding(.bottom, 10)
             Text(String(localized: "LaunchNew 新功能")).font(.system(size: 22, weight: .semibold))
-            Text(String(localized: "点一项直接去试试。以后可以在设置 › 关于 › 使用引导里再看。"))
+            Text(String(localized: "点一项直接去试试。以后可以在设置 › 高级 › 帮助里再看使用引导。"))
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
                 .padding(.top, 4)
