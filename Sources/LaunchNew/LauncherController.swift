@@ -10,7 +10,7 @@ final class LauncherPanel: NSPanel {
         hasShadow = false
         // Above the menu bar and the Dock so the launcher covers the whole screen.
         level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.mainMenuWindow)) + 2)
-        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
+        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient, .ignoresCycle]
         hidesOnDeactivate = false
         isReleasedWhenClosed = false
         animationBehavior = .none
