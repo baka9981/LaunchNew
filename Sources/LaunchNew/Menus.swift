@@ -45,6 +45,18 @@ extension NSMenu {
         return item
     }
 
+    /// An item shown in place of the one before it while ⌥ is held.
+    @discardableResult
+    func addAlternate(_ title: String, symbol: String? = nil, key: String = "", _ handler: @escaping () -> Void) -> NSMenuItem {
+        let base = items.last
+        let item = ActionMenuItem(title, symbol: symbol, key: key, handler: handler)
+        item.keyEquivalentModifierMask = (base?.keyEquivalentModifierMask ?? .command).union(.option)
+        if base?.keyEquivalent.isEmpty ?? true { item.keyEquivalentModifierMask = .option }
+        item.isAlternate = true
+        addItem(item)
+        return item
+    }
+
     func addSeparator() {
         if let last = items.last, !last.isSeparatorItem { addItem(.separator()) }
     }
@@ -67,12 +79,13 @@ enum LauncherMenus {
             for item in model.menuItems { menu.add(item.title, item.action) }
             menu.addSeparator()
         }
-        // Making things
-        menu.add(String(localized: "新建智能文件夹…"), symbol: "folder.badge.gearshape") {
-            let tags = model.completeQueryTags
-            model.sheet = .editSmartFolder(nil, query: tags.isEmpty ? "" : model.query.trimmingCharacters(in: .whitespaces))
+        menu.addSubmenu(String(localized: "新建"), symbol: "plus") { sub in
+            sub.add(String(localized: "启动项…"), symbol: "plus.app") { model.sheet = .editCustom(nil) }
+            sub.add(String(localized: "智能文件夹…"), symbol: "folder.badge.gearshape") {
+                let tags = model.completeQueryTags
+                model.sheet = .editSmartFolder(nil, query: tags.isEmpty ? "" : model.query.trimmingCharacters(in: .whitespaces))
+            }
         }
-        menu.add(String(localized: "新建启动项…"), symbol: "plus.app") { model.sheet = .editCustom(nil) }
         menu.addSubmenu(String(localized: "整理"), symbol: "square.grid.3x3.topleft.filled") { sub in
             let hasFolders = model.layout.joined().contains { if case .folder(let f) = $0 { !f.isSmart } else { false } }
             sub.add(String(localized: "解散所有文件夹"), symbol: "folder.badge.minus", enabled: hasFolders) {
@@ -81,48 +94,35 @@ enum LauncherMenus {
             sub.add(String(localized: "文件夹移到最前"), symbol: "arrow.up.to.line") { model.moveAllFolders(toStart: true) }
             sub.add(String(localized: "文件夹移到最后"), symbol: "arrow.down.to.line") { model.moveAllFolders(toStart: false) }
             sub.addSeparator()
-            sub.add(String(localized: "整理布局…")) { model.openSettings(.advanced) }
+            sub.add(String(localized: "整理布局…")) { model.openSettings(.organize) }
         }
-        menu.addSubmenu(String(localized: "布局方案"), symbol: "rectangle.stack") { sub in
-            addProfiles(to: sub, model: model)
-        }
-        menu.addSeparator()
-        // How the grid looks
+        // Only the two view choices people switch back and forth; the rest is in settings.
         menu.addSubmenu(String(localized: "视图"), symbol: "eye") { sub in
             sub.addItem(.sectionHeader(title: String(localized: "排序方式")))
             for order in SortOrder.allCases {
                 sub.add(order.title, checked: settings.sortOrder == order) { settings.sortOrder = order }
             }
             sub.addItem(.separator())
-            sub.addItem(.sectionHeader(title: String(localized: "显示模式")))
-            for mode in DisplayMode.allCases {
-                sub.add(mode.title, checked: settings.displayMode == mode) { settings.displayMode = mode }
-            }
-            sub.addItem(.separator())
             sub.addItem(.sectionHeader(title: String(localized: "浏览样式")))
             for style in BrowseStyle.allCases {
                 sub.add(style.title, checked: settings.browseStyle == style) { settings.browseStyle = style }
             }
-            sub.addItem(.separator())
-            sub.addItem(.sectionHeader(title: String(localized: "文件夹内浏览")))
-            for style in BrowseStyle.allCases {
-                sub.add(style.title, checked: settings.folderBrowseStyle == style) { settings.folderBrowseStyle = style }
+        }
+        if model.profileNames.count > 1 {
+            menu.addSubmenu(String(localized: "布局方案"), symbol: "rectangle.stack") { sub in
+                addProfiles(to: sub, model: model)
             }
         }
         if model.hiddenUnlocked {
+            menu.addSeparator()
             menu.add(String(localized: "显示隐藏的 App"), symbol: "eye.slash") { model.revealHidden() }
             menu.add(String(localized: "锁定隐藏的 App"), symbol: "lock") { model.lockHidden() }
         }
         menu.addSeparator()
-        // The app itself
-        menu.add(String(localized: "重新扫描应用"), symbol: "arrow.clockwise") { model.rescanApps() }
-        if Updater.shared.isConfigured {
-            menu.add(String(localized: "检查更新…"), symbol: "arrow.down.circle") { Updater.shared.checkForUpdates() }
-        }
         menu.add(String(localized: "设置…"), symbol: "gearshape", key: ",") { model.openSettings() }
-        menu.addSeparator()
-        menu.add(String(localized: "重启"), symbol: "arrow.triangle.2.circlepath") { AppRelauncher.relaunch() }
         menu.add(String(localized: "退出"), symbol: "power", key: "q") { NSApp.terminate(nil) }
+        // Hold ⌥ to swap Quit for Restart.
+        menu.addAlternate(String(localized: "重启"), symbol: "arrow.triangle.2.circlepath", key: "q") { AppRelauncher.relaunch() }
         return menu
     }
 
@@ -137,28 +137,16 @@ enum LauncherMenus {
                 menu.add(String(localized: "在访达中显示"), symbol: "folder") { model.reveal(app.url.path) }
             }
             if app.custom == nil {
-                menu.add(String(localized: "显示简介"), symbol: "info.circle") {
+                // Hold ⌥, as in Finder.
+                menu.addAlternate(String(localized: "显示简介"), symbol: "info.circle") {
                     model.onClose?()
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { FinderInfo.show(app.url) }
                 }
-                menu.add(String(localized: "添加到程序坞"), symbol: "dock.rectangle", enabled: !DockPins.contains(app.url)) {
-                    DockPins.add(app.url)
-                }
             }
             menu.addSeparator()
-            // Its place in the launcher
-            if app.isCustom {
-                menu.add(String(localized: "编辑启动项…"), symbol: "pencil") { model.sheet = .editCustom(app.id) }
-            } else {
-                menu.add(String(localized: "重命名"), symbol: "pencil") { model.sheet = .editApp(app.id) }
-            }
-            menu.add(String(localized: "更换图标…"), symbol: "photo") { model.sheet = .chooseIcon(app.id) }
-            menu.addSubmenu(String(localized: "标签"), symbol: "tag") { sub in
-                for tag in model.allTags {
-                    sub.add(tag, checked: meta.tags.contains(tag)) { model.toggleTag(tag, for: app.id) }
-                }
-                sub.addSeparator()
-                sub.add(String(localized: "新建标签…")) { model.sheet = .editApp(app.id) }
+            // Name, icon, tags and Dock all live in one editor.
+            menu.add(String(localized: "编辑…"), symbol: "pencil") {
+                model.sheet = app.isCustom ? .editCustom(app.id) : .editApp(app.id)
             }
             menu.addSubmenu(String(localized: "移动到"), symbol: "arrow.right.square", enabled: model.canRearrange) { sub in
                 let current = model.folderContaining(app.id)

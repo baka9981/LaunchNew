@@ -280,7 +280,7 @@ final class LauncherController {
                 else if sheet.hasPrefix("icon:") { self.model.sheet = .chooseIcon(String(sheet.dropFirst(5))) }
                 else if sheet.hasPrefix("custom:") { self.model.sheet = .editCustom(sheet) }
             }
-            if let tab = env["LAUNCHNEW_SETTINGS"].flatMap(SettingsTab.init(rawValue:)) { self.model.openSettings(tab) }
+            if let tab = env["LAUNCHNEW_SETTINGS"].flatMap(SettingsTab.named) { self.model.openSettings(tab) }
             if let name = env["LAUNCHNEW_FOLDER"],
                case .folder(let folder, _)? = self.model.pages.joined().first(where: { $0.title == name }) {
                 self.model.openFolder(folder.id)

@@ -40,7 +40,7 @@ enum URLCommand: Equatable {
             guard let profile = query["name"] else { return nil }
             self = .profile(profile)
         case "settings":
-            self = .settings(query["tab"].flatMap { SettingsTab(rawValue: $0.lowercased()) })
+            self = .settings(query["tab"].flatMap { SettingsTab.named($0) })
         default:
             return nil
         }

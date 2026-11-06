@@ -4,16 +4,25 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, appearance, apps, advanced, about
+    case general, appearance, organize, apps, advanced
     var id: String { rawValue }
+
+    /// Tab names used by links (`launchnew://settings?tab=`), including ones from older versions.
+    static func named(_ name: String) -> SettingsTab? {
+        switch name.lowercased() {
+        case "about": .advanced
+        case "layout": .organize
+        case let other: SettingsTab(rawValue: other)
+        }
+    }
 
     var title: String {
         switch self {
         case .general: String(localized: "通用")
-        case .appearance: String(localized: "界面")
+        case .appearance: String(localized: "外观")
+        case .organize: String(localized: "整理")
         case .apps: "Apps"
         case .advanced: String(localized: "高级")
-        case .about: String(localized: "关于")
         }
     }
 
@@ -21,9 +30,9 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         switch self {
         case .general: "gearshape"
         case .appearance: "camera.filters"
+        case .organize: "square.grid.3x3.topleft.filled"
         case .apps: "square.grid.2x2"
         case .advanced: "switch.2"
-        case .about: "info.circle"
         }
     }
 }
@@ -86,9 +95,9 @@ struct SettingsView: View {
                     switch model.settingsTab {
                     case .general: GeneralTab(settings: settings)
                     case .appearance: AppearanceTab(model: model, settings: settings)
+                    case .organize: OrganizeTab(model: model, settings: settings)
                     case .apps: AppsTab(model: model, settings: settings, actions: actions)
-                    case .advanced: AdvancedTab(model: model, settings: settings, actions: actions)
-                    case .about: AboutTab(model: model)
+                    case .advanced: AdvancedTab(model: model, settings: settings)
                     }
                 }
                 .padding(.horizontal, 28)
@@ -253,25 +262,25 @@ struct GeneralTab: View {
         SettingsSection(title: String(localized: "打开方式")) {
             Card {
                 Row(title: String(localized: "快捷键")) { HotKeyRecorder(spec: $settings.hotKey) }
-                Row(title: String(localized: "系统 F4 键"), subtitle: String(localized: "用键盘上的启动台键（F4）打开 LaunchNew")) {
+                Row(title: String(localized: "系统 F4 键"), info: String(localized: "用键盘上的启动台键（F4）打开 LaunchNew")) {
                     if trusted {
                         Toggle("", isOn: $settings.f4Key).toggleStyle(.switch).labelsHidden()
                     } else {
                         Button(String(localized: "授予权限")) { PermissionHelper.shared.request(.accessibility) }
                     }
                 }
-                Row(title: String(localized: "触控板"), subtitle: String(localized: "捏合打开，张开关闭，界面跟随手指；松手时过半就完成，否则退回。建议在「系统设置 › 触控板 › 更多手势」里关掉系统自带的同一手势。")) {
+                Row(title: String(localized: "触控板"), info: String(localized: "捏合打开，张开关闭，界面跟随手指；松手时过半就完成，否则退回。建议在「系统设置 › 触控板 › 更多手势」里关掉系统自带的同一手势。")) {
                     Toggle("", isOn: $settings.trackpadPinch).toggleStyle(.switch).labelsHidden()
                 }
                 if settings.trackpadPinch {
-                    Row(title: String(localized: "捏合手指数"), subtitle: String(localized: "包括拇指")) {
+                    Row(title: String(localized: "捏合手指数"), info: String(localized: "包括拇指")) {
                         MenuPicker(selection: $settings.pinchFingers, options: [3, 4, 5, TrackpadPinch.fourOrFive]) {
                             $0 == TrackpadPinch.fourOrFive ? String(localized: "4 指或 5 指")
                                 : String(format: String(localized: "%lld 指"), $0)
                         }
                     }
                 }
-                Row(title: String(localized: "触发角"), subtitle: String(localized: "把指针推到屏幕角落时打开或关闭。多台显示器时，只有不与其他显示器相邻的角落会响应。")) {
+                Row(title: String(localized: "触发角"), info: String(localized: "把指针推到屏幕角落时打开或关闭。多台显示器时，只有不与其他显示器相邻的角落会响应。")) {
                     MenuPicker(selection: $settings.hotCorner, options: HotCorner.allCases, title: \.title)
                 }
                 if SystemHotCorners.isTaken(settings.hotCorner) {
@@ -294,64 +303,11 @@ struct GeneralTab: View {
                 Row(title: String(localized: "启动台显示在")) {
                     MenuPicker(selection: $settings.targetScreen, options: TargetScreen.allCases, title: \.title)
                 }
-                Row(title: String(localized: "回到主页面"), subtitle: String(localized: "再次打开时，隔多久回到第一页；在这之前会停在上次浏览的位置")) {
+                Row(title: String(localized: "回到主页面"), info: String(localized: "再次打开时，隔多久回到第一页；在这之前会停在上次浏览的位置")) {
                     MenuPicker(selection: $settings.returnHome, options: ReturnHome.allCases, title: \.title)
                 }
                 Row(title: String(localized: "点击空白区域关闭")) {
                     Toggle("", isOn: $settings.clickBackgroundToClose).toggleStyle(.switch).labelsHidden()
-                }
-            }
-        }
-        SettingsSection(title: String(localized: "菜单栏与程序坞")) {
-            Card {
-                Row(title: String(localized: "菜单栏图标"), subtitle: settings.showMenuBarIcon ? nil : String(localized: "隐藏后，可以再次打开 LaunchNew.app 或在启动台的 ⋯ 菜单里进入设置")) {
-                    Toggle("", isOn: $settings.showMenuBarIcon).toggleStyle(.switch).labelsHidden()
-                }
-                if settings.showMenuBarIcon {
-                    Row(title: String(localized: "图标样式"), info: String(localized: "点按菜单栏图标即可打开或关闭启动台")) {
-                        HStack(spacing: 6) {
-                            ForEach(MenuBarIconStyle.allCases, id: \.self) { style in
-                                let picked = settings.menuBarIcon == style
-                                Button { settings.menuBarIcon = style } label: {
-                                    Image(systemName: style.rawValue)
-                                        .font(.system(size: 14))
-                                        .frame(width: 30, height: 26)
-                                        .background(RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                            .fill(picked ? Color.accentColor.opacity(0.18) : Color.primary.opacity(0.05)))
-                                        .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                            .strokeBorder(picked ? Color.accentColor : .clear, lineWidth: 1.5))
-                                        .foregroundStyle(picked ? Color.accentColor : .primary)
-                                        .contentShape(Rectangle())
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                    }
-                }
-            }
-            Card {
-                Row(title: String(localized: "程序坞图标"), subtitle: String(localized: "在程序坞显示图标，右键可直接打开 App，不用打开启动台")) {
-                    Toggle("", isOn: $settings.showDockIcon).toggleStyle(.switch).labelsHidden()
-                }
-                if settings.showDockIcon {
-                    Row(title: String(localized: "程序坞菜单")) {
-                        MenuPicker(selection: $settings.dockMenu, options: DockMenuContent.allCases, title: \.title)
-                    }
-                }
-                Row(title: String(localized: "应用图标"), info: String(localized: "程序坞和切换器里显示的图标")) {
-                    HStack(spacing: 12) {
-                        ForEach(AppIconStyle.allCases, id: \.self) { style in
-                            Button { settings.appIcon = style } label: {
-                                VStack(spacing: 4) {
-                                    Image(nsImage: IconArt.image(style, size: 128))
-                                        .resizable().frame(width: 52, height: 52)
-                                    Circle().fill(settings.appIcon == style ? Color.accentColor : .clear)
-                                        .frame(width: 5, height: 5)
-                                }
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
                 }
             }
         }
@@ -412,7 +368,7 @@ struct HotKeyRecorder: View {
 
 private let kVK_Escape_ = 53
 
-// MARK: - 界面
+// MARK: - 外观
 
 struct AppearanceTab: View {
     let model: LauncherModel
@@ -427,9 +383,10 @@ struct AppearanceTab: View {
                         ModeThumb(title: String(localized: "窗口"), windowed: true, selected: settings.displayMode == .window) { settings.displayMode = .window }
                     }
                 }
-                Row(title: String(localized: "隐藏程序坞"), subtitle: String(localized: "全屏时盖住程序坞和菜单栏；关掉则让程序坞留在最上面")) {
-                    Toggle("", isOn: $settings.hideDock).toggleStyle(.switch).labelsHidden()
-                        .disabled(settings.displayMode == .window)
+                if settings.displayMode == .fullScreen {
+                    Row(title: String(localized: "隐藏程序坞"), info: String(localized: "全屏时盖住程序坞和菜单栏；关掉则让程序坞留在最上面")) {
+                        Toggle("", isOn: $settings.hideDock).toggleStyle(.switch).labelsHidden()
+                    }
                 }
                 Row(title: String(localized: "动画速度")) {
                     Picker("", selection: $settings.animationSpeed) {
@@ -439,27 +396,8 @@ struct AppearanceTab: View {
                 }
             }
         }
-        SettingsSection(title: String(localized: "布局")) {
+        SettingsSection(title: String(localized: "网格")) {
             Card {
-                Row(title: String(localized: "排序方式"), info: String(localized: "按名称或时间排序时，App 位置由排序决定，不能拖动整理；文件夹内仍保持原样")) {
-                    MenuPicker(selection: $settings.sortOrder, options: SortOrder.allCases, title: \.title)
-                }
-            }
-            Card {
-                Row(title: String(localized: "浏览样式"), subtitle: settings.browseStyle == .scroll ? String(localized: "滚动模式下不能拖动整理图标") : nil) {
-                    Picker("", selection: $settings.browseStyle) {
-                        Text("分页").tag(BrowseStyle.paged)
-                        Text("滚动").tag(BrowseStyle.scroll)
-                    }
-                    .pickerStyle(.radioGroup).horizontalRadioGroupLayout().labelsHidden().fixedSize()
-                }
-                Row(title: String(localized: "文件夹内浏览"), subtitle: settings.folderBrowseStyle == .scroll ? String(localized: "App 超过一屏时上下滚动查看") : nil) {
-                    Picker("", selection: $settings.folderBrowseStyle) {
-                        Text("分页").tag(BrowseStyle.paged)
-                        Text("滚动").tag(BrowseStyle.scroll)
-                    }
-                    .pickerStyle(.radioGroup).horizontalRadioGroupLayout().labelsHidden().fixedSize()
-                }
                 Row(title: String(localized: "网格布局"), subtitle: String(localized: "列 × 行")) {
                     HStack(spacing: 8) {
                         NumberStepper(value: $settings.columns, range: 4...10)
@@ -467,13 +405,6 @@ struct AppearanceTab: View {
                         NumberStepper(value: $settings.rows, range: 3...8)
                     }
                 }
-                Row(title: String(localized: "整理空位"), subtitle: String(localized: "按当前行列，把 App 向前移动，填满前面页面的空位。")) {
-                    Button(String(localized: "重新整理")) { model.compactLayout() }
-                }
-            }
-        }
-        SettingsSection(title: String(localized: "图标")) {
-            Card {
                 Row(title: String(localized: "图标大小"), subtitle: settings.iconScale == 1 ? nil : "\(Int((settings.iconScale * 100).rounded()))%") {
                     HStack(spacing: 8) {
                         Image(systemName: "app").font(.system(size: 10)).foregroundStyle(.secondary)
@@ -483,34 +414,38 @@ struct AppearanceTab: View {
                             .disabled(settings.iconScale == 1)
                     }
                 }
-                Row(title: String(localized: "液态玻璃文件夹"), subtitle: String(localized: "文件夹和打开的文件夹透出并折射后面的内容；关掉则用烟灰玻璃")) {
+            }
+        }
+        SettingsSection(title: String(localized: "图标")) {
+            Card {
+                Row(title: String(localized: "液态玻璃文件夹"), info: String(localized: "文件夹和打开的文件夹透出并折射后面的内容；关掉则用烟灰玻璃")) {
                     Toggle("", isOn: $settings.liquidGlass).toggleStyle(.switch).labelsHidden()
                 }
-                Row(title: String(localized: "隐藏 App 名称")) {
-                    Toggle("", isOn: $settings.hideNames).toggleStyle(.switch).labelsHidden()
-                }
-                Row(title: String(localized: "隐藏文件夹名称")) {
-                    Toggle("", isOn: $settings.hideFolderNames).toggleStyle(.switch).labelsHidden()
-                }
-                Row(title: String(localized: "动态日历图标"), subtitle: String(localized: "「日历」的图标显示今天的日期")) {
-                    Toggle("", isOn: $settings.dynamicCalendar).toggleStyle(.switch).labelsHidden()
-                }
-                Row(title: String(localized: "新 App 标记"), subtitle: String(localized: "新安装的 App 图标下方亮起蓝色灯带，打开一次后熄灭")) {
-                    Toggle("", isOn: $settings.showNewDot).toggleStyle(.switch).labelsHidden()
-                }
-                Row(title: String(localized: "运行指示"), subtitle: String(localized: "正在运行的 App 图标下方亮起白色灯带")) {
-                    Toggle("", isOn: $settings.showRunningDot).toggleStyle(.switch).labelsHidden()
-                }
-                Row(title: String(localized: "通知角标"), subtitle: Permissions.accessibility
-                        ? String(localized: "显示程序坞上 App 的未读数")
-                        : String(localized: "显示程序坞上 App 的未读数，需要辅助功能权限")) {
-                    Toggle("", isOn: $settings.showBadges).toggleStyle(.switch).labelsHidden()
-                }
-                Row(title: String(localized: "常用一行"), subtitle: String(localized: "在搜索栏下方显示最近打开的 App")) {
+                Row(title: String(localized: "常用一行"), info: String(localized: "在搜索栏下方显示最近打开的 App")) {
                     Toggle("", isOn: $settings.showFrequent).toggleStyle(.switch).labelsHidden()
                 }
-                Row(title: String(localized: "淡化久未打开的 App"), subtitle: String(localized: "超过 3 个月没打开的 App 图标变淡")) {
-                    Toggle("", isOn: $settings.fadeStale).toggleStyle(.switch).labelsHidden()
+                Row(title: String(localized: "隐藏名称")) {
+                    HStack(spacing: 14) {
+                        Toggle("App", isOn: $settings.hideNames)
+                        Toggle(String(localized: "文件夹"), isOn: $settings.hideFolderNames)
+                    }
+                    .toggleStyle(.checkbox)
+                }
+                Row(title: String(localized: "图标标记")) {
+                    Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
+                        GridRow {
+                            mark("新 App 标记", $settings.showNewDot, "新安装的 App 图标下方亮起蓝色灯带，打开一次后熄灭")
+                            mark("运行指示", $settings.showRunningDot, "正在运行的 App 图标下方亮起白色灯带")
+                        }
+                        GridRow {
+                            mark("通知角标", $settings.showBadges, Permissions.accessibility
+                                 ? "显示程序坞上 App 的未读数" : "显示程序坞上 App 的未读数，需要辅助功能权限")
+                            mark("动态日历图标", $settings.dynamicCalendar, "「日历」的图标显示今天的日期")
+                        }
+                        GridRow {
+                            mark("淡化久未打开的 App", $settings.fadeStale, "超过 3 个月没打开的 App 图标变淡")
+                        }
+                    }
                 }
             }
         }
@@ -531,7 +466,7 @@ struct AppearanceTab: View {
                     }
                 }
                 if settings.background != .glass && settings.displayMode == .fullScreen {
-                    Row(title: String(localized: "模糊壁纸"), subtitle: String(localized: "拖到最左边关闭模糊")) {
+                    Row(title: String(localized: "模糊壁纸"), info: String(localized: "拖到最左边关闭模糊")) {
                         Slider(value: $settings.blur, in: 0...240).frame(width: 220)
                     }
                 }
@@ -545,6 +480,13 @@ struct AppearanceTab: View {
                 }
             }
         }
+    }
+
+    /// A small checkbox whose explanation shows on hover.
+    private func mark(_ title: String.LocalizationValue, _ isOn: Binding<Bool>, _ help: String.LocalizationValue) -> some View {
+        Toggle(String(localized: title), isOn: isOn)
+            .toggleStyle(.checkbox)
+            .help(String(localized: help))
     }
 }
 
@@ -766,17 +708,37 @@ private struct SourceRow: View {
     }
 }
 
-// MARK: - 高级
+// MARK: - 整理
 
-struct AdvancedTab: View {
+struct OrganizeTab: View {
     let model: LauncherModel
     @Bindable var settings: Settings
-    let actions: SettingsActions
     @State private var showRules = false
     @State private var rules = LayoutRules()
 
     var body: some View {
-        SettingsSection(title: String(localized: "编辑操作")) {
+        SettingsSection(title: String(localized: "排列")) {
+            Card {
+                Row(title: String(localized: "排序方式"), info: String(localized: "按名称或时间排序时，App 位置由排序决定，不能拖动整理；文件夹内仍保持原样")) {
+                    MenuPicker(selection: $settings.sortOrder, options: SortOrder.allCases, title: \.title)
+                }
+                Row(title: String(localized: "浏览样式"), subtitle: settings.browseStyle == .scroll ? String(localized: "滚动模式下不能拖动整理图标") : nil) {
+                    Picker("", selection: $settings.browseStyle) {
+                        Text("分页").tag(BrowseStyle.paged)
+                        Text("滚动").tag(BrowseStyle.scroll)
+                    }
+                    .pickerStyle(.radioGroup).horizontalRadioGroupLayout().labelsHidden().fixedSize()
+                }
+                Row(title: String(localized: "文件夹内浏览"), info: String(localized: "App 超过一屏时上下滚动查看")) {
+                    Picker("", selection: $settings.folderBrowseStyle) {
+                        Text("分页").tag(BrowseStyle.paged)
+                        Text("滚动").tag(BrowseStyle.scroll)
+                    }
+                    .pickerStyle(.radioGroup).horizontalRadioGroupLayout().labelsHidden().fixedSize()
+                }
+            }
+        }
+        SettingsSection(title: String(localized: "编辑")) {
             Card {
                 Row(title: String(localized: "多选"), info: String(localized: "按住所选按键点按 App 可多选，之后可一起拖进文件夹、新建文件夹、加标签或隐藏")) {
                     MenuPicker(selection: $settings.multiSelectKey, options: MultiSelectKey.allCases, title: \.title)
@@ -784,8 +746,29 @@ struct AdvancedTab: View {
                 Row(title: String(localized: "卸载应用"), info: String(localized: "抖动模式（长按或按住 ⌥）下，可删除的 App 左上角显示 ✕")) {
                     MenuPicker(selection: $settings.deleteBadges, options: [true, false]) { $0 ? String(localized: "抖动时显示 ✕") : String(localized: "关") }
                 }
-                Row(title: String(localized: "拖出图标"), subtitle: String(localized: "拖动图标到屏幕底边（窗口模式下拖出窗口），即可放到程序坞、访达或其他 App")) {
-                    EmptyView()
+            }
+            Text(String(localized: "拖动图标到屏幕底边（窗口模式下拖出窗口），即可放到程序坞、访达或其他 App"))
+                .font(.system(size: 11)).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 4)
+        }
+        SettingsSection(title: String(localized: "整理")) {
+            Card {
+                Row(title: String(localized: "整理空位"), info: String(localized: "按当前行列，把 App 向前移动，填满前面页面的空位。")) {
+                    Button(String(localized: "重新整理")) { model.compactLayout() }
+                }
+                Row(title: String(localized: "整理布局"), info: String(localized: "按所选规则重新整理所有页面")) {
+                    HStack {
+                        Button {
+                            confirmAlert(String(localized: "恢复默认布局？"), String(localized: "所有文件夹会被解散，App 按名称重新排列。建议先导出备份。"), button: String(localized: "恢复")) {
+                                model.resetLayout()
+                            }
+                        } label: { Text("恢复默认布局").foregroundStyle(.red) }
+                        Button(String(localized: "自定义规则")) { showRules = true }
+                    }
+                }
+                Row(title: String(localized: "久未打开的 App"), info: String(localized: "选中超过 3 个月没打开的 App，再统一移进文件夹或隐藏")) {
+                    Button(String(localized: "全部选中")) { model.selectStaleApps() }
                 }
             }
         }
@@ -805,24 +788,137 @@ struct AdvancedTab: View {
                 }
             }
         }
+        .sheet(isPresented: $showRules) {
+            RulesSheet(rules: $rules) {
+                showRules = false
+                model.applyRules(rules)
+            } cancel: { showRules = false }
+        }
+    }
+}
+
+@MainActor
+func confirmAlert(_ title: String, _ text: String, button: String, action: @escaping () -> Void) {
+    let alert = NSAlert()
+    alert.messageText = title
+    alert.informativeText = text
+    alert.addButton(withTitle: button)
+    alert.addButton(withTitle: String(localized: "取消"))
+    if Modal.run({ alert.runModal() }) == .alertFirstButtonReturn { action() }
+}
+
+@MainActor
+func failAlert(_ title: String, _ error: Error) {
+    let alert = NSAlert()
+    alert.alertStyle = .warning
+    alert.messageText = title
+    alert.informativeText = error.localizedDescription
+    Modal.run { _ = alert.runModal() }
+}
+
+// MARK: - 高级
+
+struct AdvancedTab: View {
+    let model: LauncherModel
+    @Bindable var settings: Settings
+    @State private var autoCheck = Updater.shared.automaticallyChecks
+    @State private var exporting = false
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(nsImage: IconArt.image(settings.appIcon, size: 256)).resizable().frame(width: 60, height: 60)
+            VStack(alignment: .leading, spacing: 3) {
+                Text("LaunchNew").font(.system(size: 16, weight: .semibold))
+                Text("版本 \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "–")")
+                    .font(.system(size: 12)).foregroundStyle(.secondary)
+                Text("经典启动台的重制版。全部功能免费。")
+                    .font(.system(size: 12)).foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 8)
+            if Updater.shared.isConfigured {
+                VStack(alignment: .trailing, spacing: 6) {
+                    Button(String(localized: "检查更新…")) { Updater.shared.checkForUpdates() }
+                    Toggle(String(localized: "自动检查更新"), isOn: $autoCheck)
+                        .toggleStyle(.checkbox)
+                        .font(.system(size: 12))
+                        .onChange(of: autoCheck) { _, on in Updater.shared.automaticallyChecks = on }
+                }
+            }
+        }
+        .padding(14)
+        .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+        SettingsSection(title: String(localized: "菜单栏与程序坞")) {
+            Card {
+                Row(title: String(localized: "菜单栏图标"), info: settings.showMenuBarIcon ? String(localized: "点按菜单栏图标即可打开或关闭启动台")
+                        : String(localized: "隐藏后，可以再次打开 LaunchNew.app 或在启动台的 ⋯ 菜单里进入设置")) {
+                    HStack(spacing: 10) {
+                        if settings.showMenuBarIcon {
+                            HStack(spacing: 6) {
+                                ForEach(MenuBarIconStyle.allCases, id: \.self) { style in
+                                    let picked = settings.menuBarIcon == style
+                                    Button { settings.menuBarIcon = style } label: {
+                                        Image(systemName: style.rawValue)
+                                            .font(.system(size: 14))
+                                            .frame(width: 30, height: 26)
+                                            .background(RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                                .fill(picked ? Color.accentColor.opacity(0.18) : Color.primary.opacity(0.05)))
+                                            .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                                .strokeBorder(picked ? Color.accentColor : .clear, lineWidth: 1.5))
+                                            .foregroundStyle(picked ? Color.accentColor : .primary)
+                                            .contentShape(Rectangle())
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                        Toggle("", isOn: $settings.showMenuBarIcon).toggleStyle(.switch).labelsHidden()
+                    }
+                }
+                Row(title: String(localized: "程序坞图标"), info: String(localized: "在程序坞显示图标，右键可直接打开 App，不用打开启动台")) {
+                    HStack(spacing: 10) {
+                        if settings.showDockIcon {
+                            MenuPicker(selection: $settings.dockMenu, options: DockMenuContent.allCases, title: \.title)
+                                .help(String(localized: "程序坞菜单"))
+                        }
+                        Toggle("", isOn: $settings.showDockIcon).toggleStyle(.switch).labelsHidden()
+                    }
+                }
+                Row(title: String(localized: "应用图标"), info: String(localized: "程序坞和切换器里显示的图标")) {
+                    HStack(spacing: 12) {
+                        ForEach(AppIconStyle.allCases, id: \.self) { style in
+                            Button { settings.appIcon = style } label: {
+                                VStack(spacing: 4) {
+                                    Image(nsImage: IconArt.image(style, size: 128))
+                                        .resizable().frame(width: 44, height: 44)
+                                    Circle().fill(settings.appIcon == style ? Color.accentColor : .clear)
+                                        .frame(width: 5, height: 5)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+        }
         SettingsSection(title: String(localized: "同步与迁移")) {
             Card {
                 Row(title: String(localized: "iCloud 同步"), subtitle: iCloudSubtitle) {
                     Toggle("", isOn: $settings.iCloudSync).toggleStyle(.switch).labelsHidden()
                         .disabled(!ICloudSync.isAvailable && !settings.iCloudSync)
                 }
-                Row(title: String(localized: "导入或导出布局"), subtitle: String(localized: "导入或导出 LaunchNew 的布局、文件夹、名称、别名、标签和隐藏设置，用于备份或在设备之间迁移")) {
+                Row(title: String(localized: "导入或导出布局"), info: String(localized: "导入或导出 LaunchNew 的布局、文件夹、名称、别名、标签和隐藏设置，用于备份或在设备之间迁移")) {
                     HStack {
                         Button(String(localized: "导入")) { importBackup() }
                         Button(String(localized: "导出")) { exportBackup() }
                     }
                 }
-                Row(title: String(localized: "从系统启动台导入"), subtitle: String(localized: "沿用 macOS 15 及更早版本启动台里的页面和文件夹")) {
+                Row(title: String(localized: "从系统启动台导入"), info: String(localized: "沿用 macOS 15 及更早版本启动台里的页面和文件夹")) {
                     Button(String(localized: "导入…")) { importLaunchpad() }
                 }
             }
         }
-        SettingsSection(title: String(localized: "备份与整理")) {
+        SettingsSection(title: String(localized: "备份")) {
             Card {
                 Row(title: String(localized: "自动备份"), subtitle: settings.autoBackupCount > 0
                         ? String(localized: "每次更改布局后自动备份，保留最近 \(settings.autoBackupCount) 份")
@@ -831,10 +927,7 @@ struct AdvancedTab: View {
                             value: $settings.autoBackupCount, in: 0...50)
                         .monospacedDigit()
                 }
-                Row(title: String(localized: "久未打开的 App"), subtitle: String(localized: "选中超过 3 个月没打开的 App，再统一移进文件夹或隐藏")) {
-                    Button(String(localized: "全部选中")) { model.selectStaleApps() }
-                }
-                Row(title: String(localized: "恢复自动备份"), subtitle: String(localized: "回到之前某次更改前的布局")) {
+                Row(title: String(localized: "恢复自动备份"), info: String(localized: "回到之前某次更改前的布局")) {
                     HStack {
                         let backups = AutoBackup.list()
                         Menu(String(localized: "选择…")) {
@@ -852,24 +945,41 @@ struct AdvancedTab: View {
                     }
                 }
             }
-            Card {
-                Row(title: String(localized: "整理布局"), subtitle: String(localized: "按所选规则重新整理所有页面")) {
-                    HStack {
-                        Button {
-                            confirm(String(localized: "恢复默认布局？"), String(localized: "所有文件夹会被解散，App 按名称重新排列。建议先导出备份。"), button: String(localized: "恢复")) {
-                                model.resetLayout()
-                            }
-                        } label: { Text("恢复默认布局").foregroundStyle(.red) }
-                        Button(String(localized: "自定义规则")) { showRules = true }
-                    }
-                }
-            }
         }
-        .sheet(isPresented: $showRules) {
-            RulesSheet(rules: $rules) {
-                showRules = false
-                model.applyRules(rules)
-            } cancel: { showRules = false }
+        SettingsSection(title: String(localized: "帮助")) {
+            HStack(spacing: 8) {
+                Button(String(localized: "使用引导")) {
+                    model.closeSettings()
+                    model.openGuide()
+                }
+                Button(String(localized: "在访达中显示数据文件夹")) {
+                    model.reveal(LayoutStore.directory.path)
+                }
+                Button(exporting ? String(localized: "正在收集…") : String(localized: "导出诊断信息…")) { exportDiagnostics() }
+                    .disabled(exporting)
+                    .help(String(localized: "反馈问题时附上这个文件。包含版本、设置和最近的日志，不含 App 列表和暗号"))
+            }
+            .padding(.horizontal, 4)
+        }
+    }
+
+    private func exportDiagnostics() {
+        let panel = NSSavePanel()
+        let stamp = Date().formatted(.iso8601.year().month().day())
+        panel.nameFieldStringValue = String(localized: "LaunchNew 诊断信息 \(stamp).txt")
+        panel.allowedContentTypes = [.plainText]
+        guard Modal.run({ panel.runModal() }) == .OK, let url = panel.url else { return }
+        exporting = true
+        Task {
+            let text = await Diagnostics.report(model: model)
+            exporting = false
+            do {
+                try text.write(to: url, atomically: true, encoding: .utf8)
+                model.reveal(url.path)
+            } catch {
+                let alert = NSAlert(error: error)
+                Modal.run { _ = alert.runModal() }
+            }
         }
     }
 
@@ -879,17 +989,17 @@ struct AdvancedTab: View {
         panel.nameFieldStringValue = String(localized: "LaunchNew 布局 \(stamp).json")
         panel.allowedContentTypes = [.json]
         guard Modal.run({ panel.runModal() }) == .OK, let url = panel.url else { return }
-        do { try model.exportBackup(to: url) } catch { fail(String(localized: "导出失败"), error) }
+        do { try model.exportBackup(to: url) } catch { failAlert(String(localized: "导出失败"), error) }
     }
 
     private func importBackup() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.json]
         guard Modal.run({ panel.runModal() }) == .OK, let url = panel.url else { return }
-        confirm(String(localized: "导入这个布局备份？"), String(localized: "会替换当前的布局、文件夹和 App 设置。"), button: String(localized: "导入")) {
+        confirmAlert(String(localized: "导入这个布局备份？"), String(localized: "会替换当前的布局、文件夹和 App 设置。"), button: String(localized: "导入")) {
             // A backup can unhide apps, so it needs the same verification as showing them.
             model.whenHiddenUnlocked(reason: String(localized: "导入布局备份")) {
-                do { try model.importBackup(from: url) } catch { fail(String(localized: "导入失败"), error) }
+                do { try model.importBackup(from: url) } catch { failAlert(String(localized: "导入失败"), error) }
             }
         }
     }
@@ -928,36 +1038,19 @@ struct AdvancedTab: View {
                 return
             }
         }
-        confirm(String(localized: "导入启动台的布局？"), String(localized: "会用启动台的页面和文件夹替换当前布局，名称、标签和隐藏设置保持不变。当前布局会先自动备份。"), button: String(localized: "导入")) {
-            do { try model.importLaunchpad(from: url) } catch { fail(String(localized: "导入失败"), error) }
+        confirmAlert(String(localized: "导入启动台的布局？"), String(localized: "会用启动台的页面和文件夹替换当前布局，名称、标签和隐藏设置保持不变。当前布局会先自动备份。"), button: String(localized: "导入")) {
+            do { try model.importLaunchpad(from: url) } catch { failAlert(String(localized: "导入失败"), error) }
         }
     }
 
     private func restore(_ entry: AutoBackup.Entry) {
         let when = entry.date.formatted(date: .abbreviated, time: .standard)
-        confirm(String(localized: "恢复 \(when) 的布局？"), String(localized: "会替换当前的布局、文件夹和 App 设置。当前布局也已自动备份，可以随时换回来。"), button: String(localized: "恢复")) {
+        confirmAlert(String(localized: "恢复 \(when) 的布局？"), String(localized: "会替换当前的布局、文件夹和 App 设置。当前布局也已自动备份，可以随时换回来。"), button: String(localized: "恢复")) {
             model.whenHiddenUnlocked(reason: String(localized: "恢复布局备份")) {
                 AutoBackup.snapshot()
-                do { try model.importBackup(from: entry.url) } catch { fail(String(localized: "恢复失败"), error) }
+                do { try model.importBackup(from: entry.url) } catch { failAlert(String(localized: "恢复失败"), error) }
             }
         }
-    }
-
-    private func confirm(_ title: String, _ text: String, button: String, action: @escaping () -> Void) {
-        let alert = NSAlert()
-        alert.messageText = title
-        alert.informativeText = text
-        alert.addButton(withTitle: button)
-        alert.addButton(withTitle: String(localized: "取消"))
-        if Modal.run({ alert.runModal() }) == .alertFirstButtonReturn { action() }
-    }
-
-    private func fail(_ title: String, _ error: Error) {
-        let alert = NSAlert()
-        alert.alertStyle = .warning
-        alert.messageText = title
-        alert.informativeText = error.localizedDescription
-        Modal.run { _ = alert.runModal() }
     }
 }
 
@@ -1001,69 +1094,6 @@ struct RulesSheet: View {
         }
         .padding(22)
         .frame(width: 440)
-    }
-}
-
-// MARK: - 关于
-
-struct AboutTab: View {
-    let model: LauncherModel
-    @State private var autoCheck = Updater.shared.automaticallyChecks
-    @State private var exporting = false
-
-    private func exportDiagnostics() {
-        let panel = NSSavePanel()
-        let stamp = Date().formatted(.iso8601.year().month().day())
-        panel.nameFieldStringValue = String(localized: "LaunchNew 诊断信息 \(stamp).txt")
-        panel.allowedContentTypes = [.plainText]
-        guard Modal.run({ panel.runModal() }) == .OK, let url = panel.url else { return }
-        exporting = true
-        Task {
-            let text = await Diagnostics.report(model: model)
-            exporting = false
-            do {
-                try text.write(to: url, atomically: true, encoding: .utf8)
-                model.reveal(url.path)
-            } catch {
-                let alert = NSAlert(error: error)
-                Modal.run { _ = alert.runModal() }
-            }
-        }
-    }
-
-    var body: some View {
-        VStack(spacing: 12) {
-            Image(nsImage: IconArt.image(Settings.shared.appIcon, size: 256)).resizable().frame(width: 112, height: 112)
-            Text("LaunchNew").font(.system(size: 22, weight: .semibold))
-            Text("版本 \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "–")")
-                .font(.system(size: 12)).foregroundStyle(.secondary)
-            Text("经典启动台的重制版。全部功能免费。")
-                .font(.system(size: 13)).foregroundStyle(.secondary).padding(.top, 4)
-            HStack(spacing: 10) {
-                if Updater.shared.isConfigured {
-                    Button(String(localized: "检查更新…")) { Updater.shared.checkForUpdates() }
-                }
-                Button(String(localized: "使用引导")) {
-                    model.closeSettings()
-                    model.openGuide()
-                }
-                Button(String(localized: "在访达中显示数据文件夹")) {
-                    model.reveal(LayoutStore.directory.path)
-                }
-            }
-            .padding(.top, 8)
-            Button(exporting ? String(localized: "正在收集…") : String(localized: "导出诊断信息…")) { exportDiagnostics() }
-                .disabled(exporting)
-                .help(String(localized: "反馈问题时附上这个文件。包含版本、设置和最近的日志，不含 App 列表和暗号"))
-            if Updater.shared.isConfigured {
-                Toggle(String(localized: "自动检查更新"), isOn: $autoCheck)
-                    .toggleStyle(.checkbox)
-                    .font(.system(size: 12))
-                    .onChange(of: autoCheck) { _, on in Updater.shared.automaticallyChecks = on }
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.top, 40)
     }
 }
 

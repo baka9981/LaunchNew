@@ -311,7 +311,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func checkForUpdates() { Updater.shared.checkForUpdates() }
     @objc private func openSettings() { launcher.openSettings(tab: nil) }
-    @objc private func openAbout() { launcher.openSettings(tab: .about) }
+    @objc private func openAbout() { launcher.openSettings(tab: .advanced) }
     @objc private func launchFromMenu(_ sender: NSMenuItem) {
         guard let url = sender.representedObject as? URL else { return }
         NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())

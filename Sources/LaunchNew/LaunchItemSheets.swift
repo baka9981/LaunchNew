@@ -66,6 +66,13 @@ struct CustomItemEditor: View {
                 TextField(suggestedName.isEmpty ? String(localized: "显示在图标下方") : suggestedName, text: $name)
                     .textFieldStyle(CardFieldStyle()).focused($focus, equals: 1).onSubmit(save)
             }
+            if let item {
+                Button(String(localized: "更换图标…"), systemImage: "photo") {
+                    if canSave { store() }
+                    model.sheet = .chooseIcon(item.id)
+                }
+                .controlSize(.small)
+            }
             CardButtons(confirmTitle: item == nil ? String(localized: "添加") : String(localized: "存储"),
                         confirmDisabled: !canSave, cancel: { model.sheet = nil }, confirm: save)
         }
@@ -112,13 +119,17 @@ struct CustomItemEditor: View {
 
     private func save() {
         guard canSave else { return }
+        store()
+        model.sheet = nil
+    }
+
+    private func store() {
         let typed = name.trimmingCharacters(in: .whitespaces)
         var saved = item ?? CustomItem(kind: kind, name: "", target: "")
         saved.kind = kind
         saved.name = typed.isEmpty ? suggestedName : typed
         saved.target = trimmedTarget
         model.saveCustomItem(saved)
-        model.sheet = nil
     }
 }
 
@@ -167,7 +178,11 @@ struct IconPicker: View {
                 Button(String(localized: "选择图片…"), action: chooseImage)
                 Button(String(localized: "恢复默认")) { choose(nil) }.disabled(current == nil)
                 Spacer()
-                Button(String(localized: "完成")) { model.sheet = nil }.keyboardShortcut(.defaultAction)
+                // Back to the editor it was opened from.
+                Button(String(localized: "完成")) {
+                    model.sheet = app.isCustom ? .editCustom(app.id) : .editApp(app.id)
+                }
+                .keyboardShortcut(.defaultAction)
             }
             .controlSize(.large)
         }

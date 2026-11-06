@@ -158,6 +158,7 @@ struct AppEditor: View {
     @State private var name = ""
     @State private var aliases = ""
     @State private var tags = ""
+    @State private var dockTick = 0
     @FocusState private var focus: Int?
 
     private var originalName: String { model.catalog.apps.first { $0.id == app.id }?.name ?? app.name }
@@ -184,6 +185,20 @@ struct AppEditor: View {
                     }
                 }
             }
+            HStack(spacing: 8) {
+                Button(String(localized: "更换图标…"), systemImage: "photo") {
+                    store()
+                    model.sheet = .chooseIcon(app.id)
+                }
+                let inDock = DockPins.contains(app.url)
+                Button(inDock ? String(localized: "已在程序坞中") : String(localized: "添加到程序坞"), systemImage: "dock.rectangle") {
+                    DockPins.add(app.url)
+                    dockTick += 1
+                }
+                .disabled(inDock)
+                .id(dockTick)
+            }
+            .controlSize(.small)
             CardButtons(confirmTitle: String(localized: "存储"), cancel: { model.sheet = nil }, confirm: save)
         }
         .onAppear {
@@ -195,9 +210,13 @@ struct AppEditor: View {
         }
     }
 
-    private func save() {
+    private func store() {
         model.updateApp(app.id, displayName: name, aliases: LauncherModel.splitList(aliases),
                         tags: LauncherModel.splitList(tags))
+    }
+
+    private func save() {
+        store()
         model.sheet = nil
     }
 }
