@@ -265,8 +265,9 @@ struct GeneralTab: View {
                 }
                 if settings.trackpadPinch {
                     Row(title: String(localized: "捏合手指数"), subtitle: String(localized: "包括拇指")) {
-                        MenuPicker(selection: $settings.pinchFingers, options: [3, 4, 5]) {
-                            String(format: String(localized: "%lld 指"), $0)
+                        MenuPicker(selection: $settings.pinchFingers, options: [3, 4, 5, TrackpadPinch.fourOrFive]) {
+                            $0 == TrackpadPinch.fourOrFive ? String(localized: "4 指或 5 指")
+                                : String(format: String(localized: "%lld 指"), $0)
                         }
                     }
                 }

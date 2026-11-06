@@ -216,7 +216,8 @@ final class Settings {
         hotKey = (d.data(forKey: "hotKey")).flatMap { try? JSONDecoder().decode(HotKeySpec.self, from: $0) } ?? .default
         f4Key = value("f4Key", false)
         trackpadPinch = value("trackpadPinch", false)
-        pinchFingers = min(5, max(3, value("pinchFingers", 4)))
+        let fingers = value("pinchFingers", 4)
+        pinchFingers = fingers == TrackpadPinch.fourOrFive ? fingers : min(5, max(3, fingers))
         hotCorner = HotCorner(rawValue: value("hotCorner", "")) ?? .off
         showMenuBarIcon = value("showMenuBarIcon", true)
         menuBarIcon = MenuBarIconStyle(rawValue: value("menuBarIcon", "")) ?? .grid

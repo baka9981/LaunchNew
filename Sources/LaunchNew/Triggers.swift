@@ -126,7 +126,7 @@ final class TrackpadPinch {
 
     private static let current = LockedCallbackTarget<TrackpadPinch>()
 
-    private let fingerCount: Int
+    private let fingerCounts: Set<Int>
     private let changed: @MainActor @Sendable (Direction, Double) -> Void
     private let ended: @MainActor @Sendable (Direction, Bool) -> Void
     private var devices: [UnsafeMutableRawPointer] = []
@@ -151,10 +151,18 @@ final class TrackpadPinch {
     /// Lifting the fingers past this much of the way completes the gesture; less cancels it.
     static let commitProgress = 0.5
 
+    /// The pinch-finger setting stores 3, 4 or 5, or this value for "4 or 5 fingers".
+    static let fourOrFive = 45
+
+    /// Finger counts that start a pinch for a pinch-finger setting.
+    static func fingerCounts(for setting: Int) -> Set<Int> {
+        setting == fourOrFive ? [4, 5] : [min(5, max(3, setting))]
+    }
+
     init?(fingers: Int,
           changed: @escaping @MainActor @Sendable (Direction, Double) -> Void,
           ended: @escaping @MainActor @Sendable (Direction, Bool) -> Void) {
-        fingerCount = min(5, max(3, fingers))
+        fingerCounts = Self.fingerCounts(for: fingers)
         self.changed = changed
         self.ended = ended
         guard let handle = dlopen("/System/Library/PrivateFrameworks/MultitouchSupport.framework/MultitouchSupport", RTLD_NOW),
@@ -216,11 +224,11 @@ final class TrackpadPinch {
             return
         }
         // Lifting fingers ends the gesture: complete it if it got far enough.
-        if fingers.count < fingerCount || fingers.count < 2 {
+        if fingers.count < gesture.start.count || fingers.count < 2 {
             finish(&gesture)
             return
         }
-        guard !gesture.done, gesture.start.count == fingerCount else { return }
+        guard !gesture.done, fingerCounts.contains(gesture.start.count) else { return }
         let before = Self.spread(gesture.start.values.map { $0 })
         guard before > 0.02 else { return }
         let ratio = Self.spread(gesture.start.keys.map { fingers[$0]! }) / before

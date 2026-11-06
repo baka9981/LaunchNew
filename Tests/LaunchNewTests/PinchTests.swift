@@ -17,4 +17,10 @@ struct PinchTests {
         #expect(TrackpadPinch.progress(.spread, ratio: TrackpadPinch.outThreshold) == 1)
         #expect(TrackpadPinch.progress(.spread, ratio: 0.9) == 0)
     }
+
+    @Test func fourOrFiveAcceptsBothCounts() {
+        #expect(TrackpadPinch.fingerCounts(for: TrackpadPinch.fourOrFive) == [4, 5])
+        #expect(TrackpadPinch.fingerCounts(for: 3) == [3])
+        #expect(TrackpadPinch.fingerCounts(for: 9) == [5])
+    }
 }
