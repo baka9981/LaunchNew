@@ -404,7 +404,7 @@ struct FrequentRow: View {
                     .accessibilityLabel(app.name)
                     .accessibilityAddTraits(.isButton)
                     .accessibilityAction { model.launch(app) }
-                    .nativeContextMenu { LauncherMenus.entry(.app(app), model: model, folderID: nil) }
+                    .nativeContextMenu { LauncherMenus.frequent(app, model: model) }
             }
         }
         .padding(.horizontal, 14)
@@ -413,6 +413,7 @@ struct FrequentRow: View {
             if !apps.isEmpty {
                 Capsule().fill(metrics.windowed ? Color.primary.opacity(0.05) : .white.opacity(0.1))
                     .overlay(Capsule().strokeBorder(metrics.windowed ? Color.primary.opacity(0.06) : .white.opacity(0.14), lineWidth: 0.75))
+                    .nativeContextMenu { LauncherMenus.frequent(nil, model: model) }
             }
         }
     }

@@ -462,3 +462,8 @@
 "最后面" = "Last";
 "解散所有文件夹" = "Ungroup All Folders";
 "4 指或 5 指" = "4 or 5 fingers";
+"从常用中移除" = "Remove from Recent Apps";
+"取消固定" = "Unpin";
+"固定在常用一行" = "Pin to Recent Apps Row";
+"清空常用记录" = "Clear Recent Apps";
+"隐藏常用一行" = "Hide Recent Apps Row";

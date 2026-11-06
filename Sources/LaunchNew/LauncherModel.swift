@@ -921,16 +921,62 @@ final class LauncherModel {
 
 }
 
-/// Apps opened from LaunchNew, newest first, for the frequently used row.
+/// Apps opened from LaunchNew, newest first, for the frequently used row,
+/// plus the apps pinned to the row and the ones taken off it.
 enum RecentLaunches {
     private static let key = "recentLaunches"
+    private static let pinnedKey = "frequentPinned"
+    private static let removedKey = "frequentRemoved"
     private static let limit = 30
 
     static func load() -> [String] { UserDefaults.standard.stringArray(forKey: key) ?? [] }
+    static var pinned: [String] { UserDefaults.standard.stringArray(forKey: pinnedKey) ?? [] }
+    static var removed: Set<String> { Set(UserDefaults.standard.stringArray(forKey: removedKey) ?? []) }
 
     static func record(_ id: String) {
         var ids = load().filter { $0 != id }
         ids.insert(id, at: 0)
         UserDefaults.standard.set(Array(ids.prefix(limit)), forKey: key)
+    }
+
+    static func setPinned(_ pin: Bool, _ id: String) {
+        var ids = pinned.filter { $0 != id }
+        if pin { ids.append(id) }
+        UserDefaults.standard.set(ids, forKey: pinnedKey)
+        if pin { setRemoved(false, id) }
+    }
+
+    /// A removed app stays off the row, even when opened again, until the row is reset.
+    static func setRemoved(_ remove: Bool, _ id: String) {
+        var ids = removed
+        if remove { ids.insert(id) } else { ids.remove(id) }
+        UserDefaults.standard.set(ids.sorted(), forKey: removedKey)
+        if remove { setPinned(false, id) }
+    }
+
+    static func reset() {
+        for key in [key, pinnedKey, removedKey] { UserDefaults.standard.removeObject(forKey: key) }
+    }
+
+    /// The row: pinned apps first, then the ones opened here most recently, then the
+    /// system's last-used dates, skipping removed apps.
+    static func row(apps: [AppItem], recent: [String], pinned: [String], removed: Set<String>,
+                    limit: Int, ownID: String?) -> [AppItem] {
+        var byID: [String: AppItem] = [:]
+        for app in apps { byID[app.id] = app }
+        var taken = Set<String>()
+        var result: [AppItem] = []
+        for id in pinned + recent where !removed.contains(id) && !taken.contains(id) {
+            guard let app = byID[id] else { continue }
+            taken.insert(id)
+            result.append(app)
+        }
+        if result.count < limit {
+            let rest = apps.filter { !taken.contains($0.id) && !removed.contains($0.id) && $0.lastUsedDate != nil
+                && $0.custom == nil && $0.id != ownID }
+                .sorted { $0.lastUsedDate! > $1.lastUsedDate! }
+            result += rest.prefix(limit - result.count)
+        }
+        return Array(result.prefix(limit))
     }
 }

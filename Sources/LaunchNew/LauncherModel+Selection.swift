@@ -72,18 +72,27 @@ extension LauncherModel {
             if !frequentApps.isEmpty { frequentApps = [] }
             return
         }
-        let limit = columns
-        var byID: [String: AppItem] = [:]
-        for app in visibleApps { byID[app.id] = app }
-        var result = recentIDs.compactMap { byID[$0] }
-        if result.count < limit {
-            let taken = Set(result.map(\.id))
-            let rest = visibleApps.filter { !taken.contains($0.id) && $0.lastUsedDate != nil && $0.custom == nil && $0.id != Bundle.main.bundleIdentifier }
-                .sorted { $0.lastUsedDate! > $1.lastUsedDate! }
-            result += rest.prefix(limit - result.count)
-        }
-        let apps = Array(result.prefix(limit))
+        let apps = RecentLaunches.row(apps: visibleApps, recent: recentIDs, pinned: RecentLaunches.pinned,
+                                      removed: RecentLaunches.removed, limit: columns, ownID: Bundle.main.bundleIdentifier)
         if apps != frequentApps { frequentApps = apps }
+    }
+
+    func isPinnedToFrequent(_ id: String) -> Bool { RecentLaunches.pinned.contains(id) }
+
+    func setPinnedToFrequent(_ pin: Bool, _ id: String) {
+        RecentLaunches.setPinned(pin, id)
+        updateFrequentApps()
+    }
+
+    func removeFromFrequent(_ id: String) {
+        RecentLaunches.setRemoved(true, id)
+        updateFrequentApps()
+    }
+
+    func resetFrequent() {
+        RecentLaunches.reset()
+        recentIDs = []
+        updateFrequentApps()
     }
 
     func launch(_ app: AppItem) {

@@ -203,6 +203,28 @@ enum LauncherMenus {
         return menu
     }
 
+    /// Right-click on the frequently used row: on an app, or on the row's empty space.
+    static func frequent(_ app: AppItem?, model: LauncherModel) -> NSMenu {
+        let menu = NSMenu.launcher()
+        if let app {
+            menu.add(String(localized: "打开"), symbol: "arrow.up.forward.app") { model.launch(app) }
+            if app.custom == nil || app.custom == .file {
+                menu.add(String(localized: "在访达中显示"), symbol: "folder") { model.reveal(app.url.path) }
+            }
+            menu.addSeparator()
+            if model.isPinnedToFrequent(app.id) {
+                menu.add(String(localized: "取消固定"), symbol: "pin.slash") { model.setPinnedToFrequent(false, app.id) }
+            } else {
+                menu.add(String(localized: "固定在常用一行"), symbol: "pin") { model.setPinnedToFrequent(true, app.id) }
+            }
+            menu.add(String(localized: "从常用中移除"), symbol: "minus.circle") { model.removeFromFrequent(app.id) }
+            menu.addSeparator()
+        }
+        menu.add(String(localized: "清空常用记录"), symbol: "clock.arrow.circlepath") { model.resetFrequent() }
+        menu.add(String(localized: "隐藏常用一行"), symbol: "eye.slash") { model.settings.showFrequent = false }
+        return menu
+    }
+
     /// Right-click on one of several selected apps.
     static func selection(_ model: LauncherModel) -> NSMenu {
         let menu = NSMenu.launcher()
